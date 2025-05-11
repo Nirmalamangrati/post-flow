@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PostFlow Login</title>
+  <link rel="stylesheet" href="login.css">
+</head>
+<body>
+
+  <div class="login-box">
+    <h2>Login to PostFlow</h2>
+    <form id="loginForm">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" placeholder="Enter your email">
+    
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" placeholder="Enter your password" >
+    
+      <div class="error" id="errorMsg"></div> 
+      <button class="login-button" type="submit">Login</button>
+    </form>
+    <div class="signup-link">
+      Don't have an account? <a href="registration.html">Sign up</a>
+    </div>
+  </div>
+  
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', function(event) {
+      event.preventDefault();  
+
+      const errorMsg = document.getElementById('errorMsg');
+      errorMsg.textContent = '';  
+
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      if (!email || !password) {
+        errorMsg.textContent = 'Please enter both email and password.';
+        errorMsg.style.color = 'red';
+        return; 
+      }
+      const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+      if (!emailRegex.test(email)) {
+        errorMsg.textContent = 'Please enter a valid email address.';
+        errorMsg.style.color = 'red';
+        return; 
+      }
+
+      if (!validatePassword(password)) {
+        errorMsg.textContent = 'Password must be at least 6 characters long, contain at least one uppercase letter, one lowercase letter, one number, and one special character.';
+        errorMsg.style.color = 'red';
+        return; 
+      }
+      window.location.href = "home.html"; 
+    });
+    function validatePassword(password) {
+      if (password.length < 6) return false;
+      
+      if (!/[a-z]/.test(password)) return false;
+      
+      if (!/[A-Z]/.test(password)) return false;
+    
+      if (!/\d/.test(password)) return false;
+      
+      if (!/[@$!%*?&]/.test(password)) return false;
+
+      return true; 
+    }
+
+  </script>
+
+</body>
+</html>
