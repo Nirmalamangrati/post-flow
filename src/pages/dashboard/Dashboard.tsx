@@ -17,7 +17,7 @@ export default function Dashboard() {
   const [menuOpenFor, setMenuOpenFor] = useState<string | null>(null);
 
   //for modal
-  const [isModalOpen, setIsModalOpen] = useState(true);
+  // const [isModalOpen, setIsModalOpen] = useState(true);
 
   // Fetch posts from server on load
   useEffect(() => {
