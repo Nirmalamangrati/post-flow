@@ -1,13 +1,30 @@
-import { useRef, useState, useEffect, type ChangeEvent } from "react";
+import {
+  useRef,
+  useState,
+  useEffect,
+  type ChangeEvent,
+  type KeyboardEvent,
+} from "react";
+
+type Comment = {
+  _id?: string;
+  text: string;
+  createdAt: string;
+};
 
 type Post = {
+  _id?: string;
   imageUrl: string;
   caption: string;
   createdAt: string;
+  likes?: number;
+  likedByUser?: boolean;
+  comments?: Comment[];
 };
 
 export default function Profile() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [fullname, setFullname] = useState("");
   const [caption, setCaption] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -15,6 +32,26 @@ export default function Profile() {
   const [lastUploadedImageUrl, setLastUploadedImageUrl] = useState<
     string | null
   >(null);
+
+  const [openCommentBoxPostId, setOpenCommentBoxPostId] = useState<
+    string | null
+  >(null);
+  const [commentInputs, setCommentInputs] = useState<{ [key: string]: string }>(
+    {}
+  );
+
+  const [sharePostId, setSharePostId] = useState<string | null>(null);
+
+  // Editing states for posts
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [editingCaption, setEditingCaption] = useState<string>("");
+
+  // Editing states for comments
+  const [editingComment, setEditingComment] = useState<{
+    postId: string;
+    commentId: string;
+    text: string;
+  } | null>(null);
 
   const handleCircleClick = () => {
     fileInputRef.current?.click();
@@ -44,13 +81,12 @@ export default function Profile() {
         body: formData,
       });
       const data = await res.json();
-      const fullUrl = `http://localhost:8000${data.post.imageUrl}`;
 
       setPosts([data.post, ...posts]);
       setCaption("");
       setImageFile(null);
       setImagePreview(null);
-      setLastUploadedImageUrl(fullUrl);
+      setLastUploadedImageUrl(`http://localhost:8000${data.post.imageUrl}`);
     } catch (err) {
       alert("Failed to upload post.");
       console.error(err);
@@ -61,7 +97,13 @@ export default function Profile() {
     try {
       const res = await fetch("http://localhost:8000/profilehandler");
       const data = await res.json();
-      setPosts(data);
+
+      const postsWithLikeInfo = data.map((post: Post) => ({
+        ...post,
+        likedByUser: false,
+      }));
+
+      setPosts(postsWithLikeInfo);
 
       if (data.length > 0) {
         setLastUploadedImageUrl(`http://localhost:8000${data[0].imageUrl}`);
@@ -71,15 +113,242 @@ export default function Profile() {
     }
   };
 
+  const handleLike = async (postId: string) => {
+    try {
+      const res = await fetch(
+        `http://localhost:8000/profilehandler/${postId}/like`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: "dummyUserId" }),
+        }
+      );
+      const data = await res.json();
+
+      setPosts(
+        posts.map((post) =>
+          post._id === postId
+            ? { ...post, likes: data.likes, likedByUser: data.likedByUser }
+            : post
+        )
+      );
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const toggleCommentBox = (postId: string) => {
+    setOpenCommentBoxPostId((prev) => (prev === postId ? null : postId));
+  };
+
+  const handleCommentChange = (postId: string, text: string) => {
+    setCommentInputs((prev) => ({ ...prev, [postId]: text }));
+  };
+
+  const submitComment = async (postId: string) => {
+    const text = commentInputs[postId];
+    if (!text) return;
+
+    try {
+      const res = await fetch(
+        `http://localhost:8000/profilehandler/${postId}/comment`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        }
+      );
+      const data = await res.json();
+
+      setPosts(
+        posts.map((post) =>
+          post._id === postId ? { ...post, comments: data.comments } : post
+        )
+      );
+
+      setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleCommentKeyPress = (
+    e: KeyboardEvent<HTMLInputElement>,
+    postId: string
+  ) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      submitComment(postId);
+    }
+  };
+
+  const buildPostUrl = (postId: string) => {
+    return `http://localhost:3000/post/${postId}`;
+  };
+
+  const openShareWindow = (url: string) => {
+    window.open(url, "_blank", "width=600,height=400");
+  };
+
+  const toggleShareMenu = (postId: string) => {
+    setSharePostId((prev) => (prev === postId ? null : postId));
+  };
+
+  // Edit post caption
+  const startEditing = (postId: string, currentCaption: string) => {
+    setEditingPostId(postId);
+    setEditingCaption(currentCaption);
+  };
+
+  const saveEdit = async (postId: string) => {
+    try {
+      const res = await fetch(
+        `http://localhost:8000/profilehandler/${postId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ caption: editingCaption }),
+        }
+      );
+      const data = await res.json();
+
+      setPosts(
+        posts.map((post) =>
+          post._id === postId ? { ...post, caption: data.caption } : post
+        )
+      );
+      setEditingPostId(null);
+      setEditingCaption("");
+    } catch (err) {
+      console.error("Failed to update caption", err);
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingPostId(null);
+    setEditingCaption("");
+  };
+
+  // Delete post
+  const deletePost = async (postId: string) => {
+    if (!confirm("Are you sure you want to delete this post?")) return;
+
+    try {
+      const res = await fetch(
+        `http://localhost:8000/profilehandler/${postId}`,
+        {
+          method: "DELETE",
+        }
+      );
+      if (res.ok) {
+        setPosts(posts.filter((post) => post._id !== postId));
+      } else {
+        alert("Failed to delete post");
+      }
+    } catch (err) {
+      console.error("Delete failed", err);
+    }
+  };
+
+  // ********** Comment Edit/Delete functionality **********
+
+  // Edit comment API call
+  const saveEditedComment = async (
+    postId: string,
+    commentId: string,
+    newText: string
+  ) => {
+    try {
+      const res = await fetch(
+        `http://localhost:8000/profilehandler/${postId}/comment/${commentId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: newText }),
+        }
+      );
+
+      if (!res.ok) throw new Error("Failed to update comment");
+
+      const data = await res.json();
+
+      // data.comments expected to be updated comments array
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post._id === postId ? { ...post, comments: data.comments } : post
+        )
+      );
+
+      setEditingComment(null);
+    } catch (err) {
+      console.error("Failed to update comment", err);
+      alert("Failed to update comment");
+    }
+  };
+
+  // Delete comment API call
+  const deleteComment = async (postId: string, commentId: string) => {
+    if (!confirm("Are you sure you want to delete this comment?")) return;
+
+    try {
+      const res = await fetch(
+        `http://localhost:8000/profilehandler/${postId}/comment/${commentId}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!res.ok) {
+        alert("Failed to delete comment");
+        return;
+      }
+
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post._id === postId
+            ? {
+                ...post,
+                comments: post.comments?.filter(
+                  (comment) => comment._id !== commentId
+                ),
+              }
+            : post
+        )
+      );
+    } catch (err) {
+      console.error("Failed to delete comment", err);
+    }
+  };
+
+  // Start editing a comment
+  const startEditComment = (
+    postId: string,
+    commentId: string,
+    text: string
+  ) => {
+    setEditingComment({ postId, commentId, text });
+  };
+
+  // Cancel editing comment
+  const cancelEditComment = () => {
+    setEditingComment(null);
+  };
+
   useEffect(() => {
+    const storedName = localStorage.getItem("fullname");
+    if (storedName) {
+      setFullname(storedName);
+    }
     fetchPosts();
   }, []);
 
   return (
     <div className="min-h-screen ml-46 flex flex-col items-center py-8 space-y-6 relative overflow-y-auto top-0 left-1/2 transform -translate-x-1/2 w-full max-w-xl mx-auto">
+      {/* Show user full name here */}
+      <h1 className="text-4xl font-bold mb-6">Welcome, {fullname}!</h1>
+
       {/* Upload Section */}
       <div className="flex flex-col items-center space-y-4">
-        {/* Profile Circle */}
         <div
           className="w-52 h-52 rounded-full border-4 border-red-900 bg-gray-200 flex items-center justify-center cursor-pointer hover:bg-gray-300 transition overflow-hidden"
           onClick={handleCircleClick}
@@ -108,7 +377,6 @@ export default function Profile() {
           />
         </div>
 
-        {/* Caption Input */}
         <input
           type="text"
           placeholder="What's on your mind?"
@@ -117,7 +385,6 @@ export default function Profile() {
           className="px-4 py-2 border border-gray-400 rounded w-80 focus:outline-none focus:ring-2 focus:ring-red-500"
         />
 
-        {/* Upload Button */}
         <button
           onClick={handleUpload}
           className="w-80 bg-gradient-to-r from-red-800 to-black text-white py-2 rounded font-semibold hover:opacity-90 transition"
@@ -127,11 +394,11 @@ export default function Profile() {
       </div>
 
       {/* Posts Section */}
-      <div className="w-full max-w-xl px-4 space-y-6">
-        {posts.map((post, index) => (
+      <div className="w-full max-w-xl px-4 space-y-6 relative">
+        {posts.map((post) => (
           <div
-            key={index}
-            className="bg-white shadow rounded-lg p-4 space-y-2 border"
+            key={post._id}
+            className="bg-white shadow rounded-lg p-4 space-y-2 border relative"
           >
             <div className="flex items-center space-x-3">
               <img
@@ -146,16 +413,264 @@ export default function Profile() {
                 </p>
               </div>
             </div>
-            <div className="mt-2">
-              {post.caption && (
-                <p className="text-gray-700 text-base mb-2">{post.caption}</p>
+
+            <div className="mt-2 relative">
+              {/* Editable caption */}
+              {editingPostId === post._id ? (
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-red-500"
+                  value={editingCaption}
+                  onChange={(e) => setEditingCaption(e.target.value)}
+                  onBlur={() => saveEdit(post._id!)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      saveEdit(post._id!);
+                    } else if (e.key === "Escape") {
+                      cancelEdit();
+                    }
+                  }}
+                  autoFocus
+                />
+              ) : (
+                <p
+                  className="text-gray-700 text-base mb-2 cursor-text select-text"
+                  onDoubleClick={() =>
+                    post._id && startEditing(post._id, post.caption)
+                  }
+                  title="Double click to edit caption"
+                >
+                  {post.caption}
+                </p>
               )}
+
               <img
                 src={`http://localhost:8000${post.imageUrl}`}
                 className="w-full rounded-lg object-cover border"
                 alt="Post"
               />
+
+              {/* Delete icon */}
+              <span
+                onClick={() => post._id && deletePost(post._id)}
+                className="absolute top-2 right-2 cursor-pointer text-red-600 text-xl select-none"
+                title="Delete post"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+                    post._id && deletePost(post._id);
+                  }
+                }}
+              >
+                🗑️
+              </span>
             </div>
+
+            {/* Like, Comment, Share */}
+            <div className="flex space-x-6 mt-3">
+              <button
+                onClick={() => post._id && handleLike(post._id)}
+                className={`font-semibold ${
+                  post.likedByUser ? "text-red-600" : "text-gray-600"
+                }`}
+              >
+                ❤️ Like {post.likes ?? 0}
+              </button>
+              <button
+                onClick={() => post._id && toggleCommentBox(post._id)}
+                className="font-semibold text-gray-600"
+              >
+                💬 Comment
+              </button>
+              <button
+                onClick={() => post._id && toggleShareMenu(post._id)}
+                className="font-semibold text-gray-600 relative"
+              >
+                ↗️ Share
+              </button>
+            </div>
+
+            {/* Share menu */}
+            {sharePostId === post._id && (
+              <div className="absolute bg-white border rounded shadow p-2 mt-2 space-x-3 z-50 right-4">
+                <span
+                  onClick={() =>
+                    post._id &&
+                    openShareWindow(
+                      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+                        buildPostUrl(post._id)
+                      )}`
+                    )
+                  }
+                  className="text-blue-600 font-bold cursor-pointer select-none"
+                >
+                  Facebook
+                </span>
+                <span
+                  onClick={() =>
+                    post._id &&
+                    openShareWindow(
+                      `https://twitter.com/intent/tweet?url=${encodeURIComponent(
+                        buildPostUrl(post._id)
+                      )}&text=${encodeURIComponent(post.caption)}`
+                    )
+                  }
+                  className="text-blue-400 font-bold cursor-pointer select-none"
+                >
+                  Twitter
+                </span>
+                <span
+                  onClick={() =>
+                    post._id &&
+                    openShareWindow(
+                      `https://wa.me/?text=${encodeURIComponent(
+                        buildPostUrl(post._id)
+                      )}`
+                    )
+                  }
+                  className="text-green-600 font-bold cursor-pointer select-none"
+                >
+                  WhatsApp
+                </span>
+                <span
+                  onClick={() =>
+                    post._id &&
+                    openShareWindow(
+                      `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(
+                        buildPostUrl(post._id)
+                      )}&title=${encodeURIComponent(post.caption)}`
+                    )
+                  }
+                  className="text-blue-700 font-bold cursor-pointer select-none"
+                >
+                  LinkedIn
+                </span>
+              </div>
+            )}
+
+            {/* Comment box */}
+            {openCommentBoxPostId === post._id && (
+              <>
+                <div className="mt-2">
+                  <input
+                    id={`comment-input-${post._id}`}
+                    type="text"
+                    placeholder="Write a comment..."
+                    value={commentInputs[post._id ?? ""] || ""}
+                    onChange={(e) =>
+                      post._id && handleCommentChange(post._id, e.target.value)
+                    }
+                    onKeyDown={(e) =>
+                      post._id && handleCommentKeyPress(e, post._id)
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-red-500"
+                  />
+                </div>
+
+                <div className="mt-4 space-y-2 max-h-40 overflow-y-auto">
+                  {(post.comments || []).map((comment) => {
+                    const isEditing =
+                      editingComment &&
+                      editingComment.postId === post._id &&
+                      editingComment.commentId === comment._id;
+
+                    return (
+                      <div
+                        key={comment._id}
+                        className="bg-gray-100 p-2 rounded space-y-1"
+                      >
+                        {isEditing ? (
+                          <>
+                            <input
+                              type="text"
+                              className="w-full px-2 py-1 border rounded"
+                              value={editingComment.text}
+                              onChange={(e) =>
+                                setEditingComment((prev) =>
+                                  prev
+                                    ? { ...prev, text: e.target.value }
+                                    : null
+                                )
+                              }
+                              onKeyDown={async (e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  if (!editingComment) return;
+                                  await saveEditedComment(
+                                    editingComment.postId,
+                                    editingComment.commentId,
+                                    editingComment.text
+                                  );
+                                } else if (e.key === "Escape") {
+                                  cancelEditComment();
+                                }
+                              }}
+                              autoFocus
+                            />
+                            <div className="flex space-x-2 mt-1">
+                              <button
+                                className="text-green-600 font-semibold"
+                                onClick={() =>
+                                  editingComment &&
+                                  saveEditedComment(
+                                    editingComment.postId,
+                                    editingComment.commentId,
+                                    editingComment.text
+                                  )
+                                }
+                              >
+                                Save
+                              </button>
+                              <button
+                                className="text-red-600 font-semibold"
+                                onClick={cancelEditComment}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm">{comment.text}</p>
+                            <p className="text-xs text-gray-400">
+                              {new Date(comment.createdAt).toLocaleString()}
+                            </p>
+                            <div className="flex space-x-3 mt-1">
+                              <button
+                                className="text-blue-600 text-xs underline"
+                                onClick={() =>
+                                  post._id &&
+                                  comment._id &&
+                                  startEditComment(
+                                    post._id,
+                                    comment._id,
+                                    comment.text
+                                  )
+                                }
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                className="text-red-600 text-xs underline"
+                                onClick={() =>
+                                  post._id &&
+                                  comment._id &&
+                                  deleteComment(post._id, comment._id)
+                                }
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         ))}
       </div>
