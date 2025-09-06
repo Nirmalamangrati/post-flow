@@ -3,7 +3,6 @@ import Dashboard from "./pages/dashboard/Dashboard";
 import Profile from "./pages/profile/Profile";
 import Theme from "./pages/theme/Theme";
 import Notification from "./pages/notification/Notification";
-import Chats from "./pages/chats/Chats";
 import Login from "./login/Login";
 import Registration from "./registration/Registration";
 import PrivateComponent from "./componets/PrivateComponent";
