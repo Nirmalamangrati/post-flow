@@ -48,7 +48,7 @@ const Registration = () => {
     }
 
     try {
-      const res = await fetch("http://localhost:8000/api/register", {
+      const res = await fetch("http://localhost:8000/api/users/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -57,12 +57,11 @@ const Registration = () => {
       const data = await res.json();
       console.log(data, "@data");
       console.log(res, "@res");
-      debugger;
       if (res.status === 201) {
         toast.success("Registration successful!");
-        
+
         // ✅ Save user info to localStorage
-          localStorage.setItem("token", data.token); // ✅ Save token
+        localStorage.setItem("token", data.token); // ✅ Save token
         localStorage.setItem("fullname", formData.fullname);
         localStorage.setItem("email", formData.email);
         localStorage.setItem("dob", formData.dob);
@@ -155,6 +154,7 @@ const Registration = () => {
               Login
             </Link>
           </p>
+          
         </form>
       </div>
     </div>

@@ -10,59 +10,61 @@ const menuItems = [
   {
     label: "Profile",
     icon: "https://img.icons8.com/color/32/user-male-circle--v1.png",
-    to: "profile",
+    to: "/profile",
   },
   {
     label: "Theme",
     icon: "https://img.icons8.com/color/32/paint-palette.png",
-    to: "theme",
-  },
-  {
-    label: "Categories",
-    icon: "https://img.icons8.com/color/32/opened-folder.png",
-    to: "#",
-    subCategories: ["Technology", "Travel", "Lifestyle", "Food", "Funny"],
-  },
-  {
-    label: "Chats",
-    icon: "https://img.icons8.com/color/32/topic--v1.png",
-    to: "chats",
+    to: "/theme",
   },
   {
     label: "Notification",
     icon: "https://img.icons8.com/color/32/appointment-reminders--v1.png",
-    to: "notification",
+    to: "/notification",
   },
   {
     label: "Friends",
     icon: "https://img.icons8.com/color/32/conference-call--v2.png",
-    to: "Friends",
+    to: "/friends",
   },
   {
     label: "Settings",
     icon: "https://img.icons8.com/color/32/settings--v1.png",
-    to: "settings",
+    to: "/settings",
   },
 ];
 
 export default function Sidebar() {
-  const [isOpen, setIsOpen] = useState(true);
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <>
-      {/* Mobile Toggle */}
+      {/* Desktop small toggle (3-line icon) */}
+      <div className="hidden md:flex fixed top-1/20 right-0 -translate-y-1/2 z-50">
+        <button
+          className="flex flex-col justify-between w-8 h-6 p-1 bg-red-700 rounded ml-1"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          <span className="block h-0.5 w-full bg-white"></span>
+          <span className="block h-0.5 w-full bg-white"></span>
+          <span className="block h-0.5 w-full bg-white"></span>
+        </button>
+      </div>
+
+      {/* Mobile toggle button */}
       <button
-        className="md:hidden fixed top-4 left-4 z-50 bg-red-700 text-white p-2 rounded"
+        className="md:hidden fixed top-4 left-4 z-50 bg-red-700 text-white p-2 rounded justify-center"
         onClick={() => setIsOpen(!isOpen)}
       >
         {isOpen ? "Close" : "Menu"}
       </button>
 
+      {/* Sidebar */}
       <div
-        className={`fixed top-0 left-0 h-screen w-[300px] tracking-widest leading-loose bg-gradient-to-b from-black via-[#3a0000] to-[#a30000] transition-transform z-40 transform ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0`}
+        className={`fixed top-0 left-0 h-screen w-full bg-gradient-to-b from-black via-[#3a0000] to-[#a30000] z-40 transform transition-transform
+          ${isOpen ? "translate-x-0" : "-translate-x-full"} md:${
+          isOpen ? "translate-x-0" : "-translate-x-[260px]"
+        }`}
       >
         <div className="flex flex-col h-full justify-between py-6 relative">
           {/* Top Section */}
@@ -77,20 +79,12 @@ export default function Sidebar() {
 
             <ul className="flex flex-col gap-3 relative">
               {menuItems.map((item) => (
-                <li
-                  key={item.label}
-                  className="px-4 relative"
-                  onMouseEnter={() =>
-                    item.subCategories && setHoveredItem(item.label)
-                  }
-                  onMouseLeave={() =>
-                    item.subCategories && setHoveredItem(null)
-                  }
-                >
+                <li key={item.label} className="px-4 relative">
                   <NavLink
                     to={item.to}
+                    onClick={() => setIsOpen(false)} // ✅ this closes sidebar
                     className={({ isActive }) =>
-                      `flex items-center gap-4 text-base font-medium transition-all duration-200 ${
+                      `flex items-center justify-center gap-4 text-base font-medium transition-all duration-200 ${
                         isActive
                           ? "text-red-500 bg-white/10 px-3 py-2 rounded-lg"
                           : "text-white hover:bg-white/10 px-3 py-2 rounded-lg"
@@ -100,32 +94,7 @@ export default function Sidebar() {
                   >
                     <img src={item.icon} alt={item.label} className="w-6 h-6" />
                     <span>{item.label}</span>
-                    {item.subCategories && (
-                      <span className="ml-auto text-sm">▶</span>
-                    )}
                   </NavLink>
-
-                  {/* Subcategory Popup */}
-                  {hoveredItem === item.label && item.subCategories && (
-                    <ul className="absolute top-0 left-full ml-2 mt-1 w-40 bg-black bg-opacity-80 border border-white/10 rounded shadow z-50">
-                      {item.subCategories.map((sub) => (
-                        <li key={sub}>
-                          <NavLink
-                            to={`/categories/${sub.toLowerCase()}`}
-                            className={({ isActive }) =>
-                              `block px-4 py-2 text-sm transition ${
-                                isActive
-                                  ? "bg-red-500 text-white"
-                                  : "text-white hover:bg-white/10"
-                              }`
-                            }
-                          >
-                            {sub}
-                          </NavLink>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
                 </li>
               ))}
             </ul>
@@ -136,7 +105,8 @@ export default function Sidebar() {
             <hr className="border-t border-white/20 mx-4 mb-4" />
             <NavLink
               to="/login"
-              className="flex items-center gap-4 px-4 py-2 text-white hover:bg-white/10 rounded-lg transition"
+              onClick={() => setIsOpen(false)} // ✅ logout click also hides sidebar
+              className="justify-center flex items-center gap-4 px-4 py-2 text-white hover:bg-white/10 rounded-lg transition"
             >
               <img
                 src="https://img.icons8.com/color/32/logout-rounded-left.png"

@@ -19,8 +19,12 @@ export default function Theme() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [filterFrame, setFilterFrame] = useState<string | "all">("all");
 
-  const [openCommentBoxPostId, setOpenCommentBoxPostId] = useState< number | null >(null);
-  const [commentInputs, setCommentInputs] = useState<{ [key: number]: string }>({});
+  const [openCommentBoxPostId, setOpenCommentBoxPostId] = useState<
+    number | null
+  >(null);
+  const [commentInputs, setCommentInputs] = useState<{ [key: number]: string }>(
+    {}
+  );
   const [sharePostId, setSharePostId] = useState<number | null>(null);
 
   // For editing post
@@ -105,7 +109,6 @@ export default function Theme() {
         }
       });
     };
-    
   }, []);
 
   const formatNumber = (num: number) => {
@@ -334,11 +337,6 @@ export default function Theme() {
         {/* Stats and Analytics */}
         <div className="flex-1">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <StatCard label="Total Posts" value={`${posts.length}`} />
-            <StatCard
-              label="Followers"
-              value={formatNumber(posts.length * 1)}
-            />
             <StatCard
               label="Total Views"
               value={formatNumber(posts.length * 1)}

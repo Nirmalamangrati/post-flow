@@ -13,6 +13,8 @@ type Comment = {
 };
 
 type Post = {
+  image: any;
+  mediaUrl: string;
   _id?: string;
   imageUrl: string;
   caption: string;
@@ -21,6 +23,8 @@ type Post = {
   likedByUser?: boolean;
   comments?: Comment[];
 };
+
+const userId = localStorage.getItem("userId");
 
 export default function Profile() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -66,7 +70,7 @@ export default function Profile() {
   };
 
   const handleUpload = async () => {
-    if (!imageFile) {
+    if (!imageFile || !userId) {
       alert("Please select an image!");
       return;
     }
@@ -74,11 +78,16 @@ export default function Profile() {
     const formData = new FormData();
     formData.append("image", imageFile);
     formData.append("caption", caption);
+    formData.append("userId", userId);
 
     try {
+      const token = localStorage.getItem("token");
       const res = await fetch("http://localhost:8000/profilehandler", {
         method: "POST",
         body: formData,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
       const data = await res.json();
 
@@ -86,16 +95,27 @@ export default function Profile() {
       setCaption("");
       setImageFile(null);
       setImagePreview(null);
-      setLastUploadedImageUrl(`http://localhost:8000${data.post.imageUrl}`);
+      setLastUploadedImageUrl(`${data.post.imageUrl}`);
     } catch (err) {
-      alert("Failed to upload post.");
+      alert(" upload post.");
       console.error(err);
     }
   };
 
-  const fetchPosts = async () => {
+  // New fetchMyPost function with token authorization
+  const fetchMyPost = async () => {
     try {
-      const res = await fetch("http://localhost:8000/profilehandler");
+      const token = localStorage.getItem("token");
+
+      const res = await fetch("http://localhost:8000/profilehandler/my-post", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) throw new Error("Failed to fetch user posts");
+
       const data = await res.json();
 
       const postsWithLikeInfo = data.map((post: Post) => ({
@@ -109,18 +129,22 @@ export default function Profile() {
         setLastUploadedImageUrl(`http://localhost:8000${data[0].imageUrl}`);
       }
     } catch (error) {
-      console.error("Failed to fetch posts:", error);
+      console.error("Failed to fetch user posts:", error);
     }
   };
 
   const handleLike = async (postId: string) => {
     try {
+      const token = localStorage.getItem("token");
       const res = await fetch(
         `http://localhost:8000/profilehandler/${postId}/like`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: "dummyUserId" }),
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({}),
         }
       );
       const data = await res.json();
@@ -150,11 +174,15 @@ export default function Profile() {
     if (!text) return;
 
     try {
+      const token = localStorage.getItem("token");
       const res = await fetch(
         `http://localhost:8000/profilehandler/${postId}/comment`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify({ text }),
         }
       );
@@ -183,7 +211,7 @@ export default function Profile() {
   };
 
   const buildPostUrl = (postId: string) => {
-    return `http://localhost:3000/post/${postId}`;
+    return `http://localhost:8000/post/${postId}`;
   };
 
   const openShareWindow = (url: string) => {
@@ -202,25 +230,37 @@ export default function Profile() {
 
   const saveEdit = async (postId: string) => {
     try {
+      const token = localStorage.getItem("token"); // Get JWT token
+
       const res = await fetch(
         `http://localhost:8000/profilehandler/${postId}`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`, // Auth header
+          },
           body: JSON.stringify({ caption: editingCaption }),
         }
       );
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Failed to update");
+      }
+
       const data = await res.json();
 
-      setPosts(
-        posts.map((post) =>
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
           post._id === postId ? { ...post, caption: data.caption } : post
         )
       );
       setEditingPostId(null);
       setEditingCaption("");
     } catch (err) {
-      console.error("Failed to update caption", err);
+      console.error("Failed to update caption:", err);
+      alert("Caption update failed. Try again.");
     }
   };
 
@@ -238,8 +278,12 @@ export default function Profile() {
         `http://localhost:8000/profilehandler/${postId}`,
         {
           method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         }
       );
+
       if (res.ok) {
         setPosts(posts.filter((post) => post._id !== postId));
       } else {
@@ -250,20 +294,27 @@ export default function Profile() {
     }
   };
 
-  // ********** Comment Edit/Delete functionality **********
-
-  // Edit comment API call
+  // Edit comment and updateeditcomment API call
   const saveEditedComment = async (
     postId: string,
     commentId: string,
     newText: string
   ) => {
     try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please login to edit comments");
+        return;
+      }
+
       const res = await fetch(
         `http://localhost:8000/profilehandler/${postId}/comment/${commentId}`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`, // <--- Add this
+          },
           body: JSON.stringify({ text: newText }),
         }
       );
@@ -272,7 +323,6 @@ export default function Profile() {
 
       const data = await res.json();
 
-      // data.comments expected to be updated comments array
       setPosts((prevPosts) =>
         prevPosts.map((post) =>
           post._id === postId ? { ...post, comments: data.comments } : post
@@ -286,7 +336,7 @@ export default function Profile() {
     }
   };
 
-  // Delete comment API call
+  // Delete comment  API call
   const deleteComment = async (postId: string, commentId: string) => {
     if (!confirm("Are you sure you want to delete this comment?")) return;
 
@@ -295,6 +345,9 @@ export default function Profile() {
         `http://localhost:8000/profilehandler/${postId}/comment/${commentId}`,
         {
           method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`, // Add this line
+          },
         }
       );
 
@@ -339,8 +392,14 @@ export default function Profile() {
     if (storedName) {
       setFullname(storedName);
     }
-    fetchPosts();
+    fetchMyPost(); // <-- changed here to fetch user-specific posts with token
   }, []);
+
+  useEffect(() => {
+    const lastImageUrl = posts[0]?.imageUrl ?? "";
+    setLastUploadedImageUrl(lastImageUrl);
+    console.log(posts, "@all posts");
+  }, [posts]);
 
   return (
     <div className="min-h-screen ml-46 flex flex-col items-center py-8 space-y-6 relative overflow-y-auto top-0 left-1/2 transform -translate-x-1/2 w-full max-w-xl mx-auto">
@@ -402,7 +461,7 @@ export default function Profile() {
           >
             <div className="flex items-center space-x-3">
               <img
-                src={`http://localhost:8000${post.imageUrl}`}
+                src={post.imageUrl}
                 className="w-10 h-10 rounded-full border object-cover"
                 alt="profile"
               />
@@ -444,11 +503,17 @@ export default function Profile() {
                 </p>
               )}
 
-              <img
-                src={`http://localhost:8000${post.imageUrl}`}
-                className="w-full rounded-lg object-cover border"
-                alt="Post"
-              />
+              {post.imageUrl || post.mediaUrl ? (
+                <img
+                  src={post.imageUrl || post.mediaUrl}
+                  alt="Post"
+                  className="w-full rounded-lg object-cover border"
+                />
+              ) : (
+                <div className="w-full h-48 bg-gray-200 flex items-center justify-center text-gray-400">
+                  No image available
+                </div>
+              )}
 
               {/* Delete icon */}
               <span
@@ -579,7 +644,7 @@ export default function Profile() {
                     return (
                       <div
                         key={comment._id}
-                        className="bg-gray-100 p-2 rounded space-y-1"
+                        className="bg-gray-100 p-2 rounded space-y-1  w-[calc(100%-280px)]"
                       >
                         {isEditing ? (
                           <>

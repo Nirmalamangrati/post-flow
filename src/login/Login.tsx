@@ -41,27 +41,32 @@ function Login() {
     try {
       setLoading(true);
 
-      const res = await fetch("http://localhost:8000/api/login", {
+      const res = await fetch("http://localhost:8000/api/users/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
       const data = await res.json();
-
+      console.log(data);
       if (res.ok) {
         toast.success("Login successful!");
-        // Example: save token to localStorage
-        localStorage.setItem("token", data.token);
 
-        // Navigate to dashboard or wherever
+        //   Save token and correct user info
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("userId", data.user._id);
+        localStorage.setItem("fullname", data.user.fullname);
+        localStorage.setItem("email", data.user.email || "");
+        localStorage.setItem("dob", data.user.dob || "");
+        localStorage.setItem("phone", data.user.phone || "");
+
         navigate("/dashboard");
       } else {
         setErrorMsg(data.message || "Login failed");
         toast.error(data.message || "Login failed");
       }
     } catch (error) {
-      console.log(error);
+      console.error(error);
       setErrorMsg("Server error");
       toast.error("Server error");
     } finally {
@@ -87,6 +92,7 @@ function Login() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
               required
+              autoComplete="email"
               className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-red-700 transition"
             />
           </div>
@@ -102,6 +108,7 @@ function Login() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
               required
+              autoComplete="current-password"
               className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-red-700 transition"
             />
           </div>
