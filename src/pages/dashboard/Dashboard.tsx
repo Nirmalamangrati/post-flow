@@ -16,7 +16,6 @@ type Post = {
   comments: CommentType[];
   createdAt?: string;
 };
-
 export default function Dashboard() {
   const [caption, setCaption] = useState("");
   const [posts, setPosts] = useState<Post[]>([]);
