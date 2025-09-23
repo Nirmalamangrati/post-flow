@@ -2,17 +2,14 @@ import { Routes, Route, useParams } from "react-router-dom";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Profile from "./pages/profile/Profile";
 import Theme from "./pages/theme/Theme";
-<<<<<<< HEAD
 import Chats from "./pages/chats/Chats";
-=======
 import Notification from "./pages/notification/Notification";
->>>>>>> 381aaea33581a431b36e2d19ebb14107e417286c
+
 import Login from "./login/Login";
 import Registration from "./registration/Registration";
 import PrivateComponent from "./componets/PrivateComponent";
 import App from "./App";
 import Setting from "./setting/Setting";
-import { Notification } from "@mantine/core";
 import AutoAdminLogin from "./admin/AutoAdminLogin.tsx";
 import FriendList from "./FriendList/FriendList.tsx";
 import FriendsPosts from "./FriendsPosts/FriendsPosts.tsx";
