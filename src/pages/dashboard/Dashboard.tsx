@@ -16,6 +16,10 @@ type Post = {
   comments: CommentType[];
   createdAt?: string;
 };
+
+// Define the available categories
+const categories = ["technology", "travel", "funny", "food", "lifestyle"];
+
 export default function Dashboard() {
   const [caption, setCaption] = useState("");
   const [posts, setPosts] = useState<Post[]>([]);
@@ -43,6 +47,40 @@ export default function Dashboard() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResultsFound, setSearchResultsFound] = useState(true);
 
+  const [activeFilter, setActiveFilter] = useState("all");
+
+  const [friendRequestsList, setFriendRequestsList] = useState<
+    { _id: string; fromUserId: string; fromName: string }[]
+  >([]);
+  const [showFriendRequests, setShowFriendRequests] = useState(false);
+
+  useEffect(() => {
+    async function fetchFriendRequests() {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch("http://localhost:8000/api/friends/all", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
+        const data = await res.json();
+        setFriendRequestsList(data);
+      } catch (err) {
+        console.error("Error fetching friend requests:", err);
+      }
+    }
+
+    fetchFriendRequests();
+  }, []);
+
+  const toggleFriendRequests = () => setShowFriendRequests((prev) => !prev);
+
   useEffect(() => {
     console.log("User ID:", userId);
     console.log("Full Name:", fullName);
@@ -50,9 +88,16 @@ export default function Dashboard() {
     fetchPosts();
   }, [userId, fullName, selectedFile]);
 
-  async function fetchPosts() {
+  async function fetchPosts(filter = "all") {
     try {
-      const res = await fetch("http://localhost:8000/dashboard");
+      const url =
+        filter === "all"
+          ? "http://localhost:8000/dashboard"
+          : `http://localhost:8000/dashboard?filter=${encodeURIComponent(
+              filter
+            )}`;
+
+      const res = await fetch(url);
       const data = await res.json();
       setPosts(data);
     } catch (err) {
@@ -294,12 +339,18 @@ export default function Dashboard() {
 
   async function applyFilter(categoryOrKeyword: string) {
     setIsSearching(true);
+    setActiveFilter(categoryOrKeyword);
+    setCaption(categoryOrKeyword === "all" ? "" : categoryOrKeyword);
+
     try {
-      const res = await fetch(
-        `http://localhost:8000/dashboard?filter=${encodeURIComponent(
-          categoryOrKeyword
-        )}`
-      );
+      const url =
+        categoryOrKeyword === "all"
+          ? "http://localhost:8000/dashboard"
+          : `http://localhost:8000/dashboard?filter=${encodeURIComponent(
+              categoryOrKeyword
+            )}`;
+
+      const res = await fetch(url);
       const data = await res.json();
 
       setSearchResultsFound(data.length > 0);
@@ -313,12 +364,97 @@ export default function Dashboard() {
     }
   }
 
+  async function handleAccept(requestId: string) {
+    try {
+      const token = localStorage.getItem("token"); // get the JWT token
+      const res = await fetch(
+        // FIX: Added the missing forward slash after the port number 8000
+        `http://localhost:8000/api/friends/accept/${requestId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`, // send token here
+          },
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      // Remove accepted request from list
+      setFriendRequestsList((prev) => prev.filter((r) => r._id !== requestId));
+    } catch (err) {
+      console.error("Error accepting friend request:", err);
+    }
+  }
+
+  async function handleReject(requestId: string) {
+    try {
+      await fetch(`http://localhost:8000/friend-requests/reject/${requestId}`, {
+        method: "POST",
+      });
+      setFriendRequestsList((prev) => prev.filter((r) => r._id !== requestId));
+    } catch (err) {
+      console.error("Error rejecting friend request:", err);
+    }
+  }
+
   return (
-    <div className="sticky top-0 ml-40 w-[calc(100%-280px)]  min-h-screen overflow-y-auto">
+    <div className="sticky top-0 ml-40 w-[calc(100%-280px)]  min-h-screen overflow-y-auto">
       <h1>Welcome {fullName}</h1>
       <p>You are: {userId}</p>
-      <button className="p-2  rounded">💬</button>
-      <button className="p-2 ml-50">🔔</button>
+      {/* New Parent Div to contain ALL three icons */}
+      <div className="flex items-center gap-50">
+        {/* 1. Friend Request Icon and Dropdown (Keep it relative for the absolute dropdown) */}
+        <div className="relative">
+          <button onClick={toggleFriendRequests} className="p-2 ml-50 rounded">
+            👥
+            {friendRequestsList.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full px-1">
+                {friendRequestsList.length}
+              </span>
+            )}
+          </button>
+
+          {showFriendRequests && (
+            // Note: I moved the dropdown to align right/end of the button
+            <div className="absolute top-full right-0 mt-2 w-64 bg-white shadow-lg rounded-lg z-50">
+              {friendRequestsList.length === 0 ? (
+                <p className="p-2 text-gray-500 text-sm">No friend requests</p>
+              ) : (
+                friendRequestsList.map((req) => (
+                  <div
+                    key={req._id}
+                    className="flex justify-between items-center p-2 hover:bg-gray-100"
+                  >
+                    <span>{req.fromName}</span>
+                    <div className="flex gap-2">
+                      <button
+                        className="text-green-500"
+                        onClick={() => handleAccept(req._id)}
+                      >
+                        Accept
+                      </button>
+                      <button
+                        className="text-red-500"
+                        onClick={() => handleReject(req._id)}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        <button className="p-2 rounded">💬</button>
+
+        <button className="p-2 rounded">🔔</button>
+      </div>
 
       <div className=" flex gap-4 items-center mb-3">
         <input
@@ -335,6 +471,7 @@ export default function Dashboard() {
               setPosts([]);
               return;
             }
+            // Use the search term to apply the filter
             applyFilter(caption.trim());
           }}
           className="bg-red-700 text-white px-4 py-2 rounded-full hover:bg-red-900"
@@ -350,38 +487,34 @@ export default function Dashboard() {
         </button>
       </div>
 
+      {/* FILTER BAR IMPLEMENTATION */}
       <div className="sticky filter-bar">
         <div className="flex">
+          {/* Default 'All' button to reset filter */}
           <div
-            className="mx-3 bg-blue-200 p-2 rounded cursor-pointer"
-            onClick={() => applyFilter("technology")}
+            className={`mx-3 p-2 rounded cursor-pointer ${
+              activeFilter === "all" ? "bg-blue-600 text-white" : "bg-blue-200"
+            }`}
+            onClick={() => applyFilter("all")}
           >
-            Technology
+            All Posts
           </div>
-          <div
-            className="mx-3 bg-blue-200 p-2 rounded cursor-pointer"
-            onClick={() => applyFilter("travel")}
-          >
-            Travel
-          </div>
-          <div
-            className="mx-3 bg-blue-200 p-2 rounded cursor-pointer"
-            onClick={() => applyFilter("funny")}
-          >
-            Funny
-          </div>
-          <div
-            className="mx-3 bg-blue-200 p-2 rounded cursor-pointer"
-            onClick={() => applyFilter("food")}
-          >
-            Food
-          </div>
-          <div
-            className="mx-3 bg-blue-200 p-2 rounded cursor-pointer"
-            onClick={() => applyFilter("lifestyle")}
-          >
-            Lifestyle
-          </div>
+
+          {/* Mapping the defined categories */}
+          {categories.map((category) => (
+            <div
+              key={category}
+              className={`mx-3 p-2 rounded cursor-pointer capitalize ${
+                activeFilter === category
+                  ? "bg-blue-600 text-white"
+                  : "bg-blue-200"
+              }`}
+              // CALL THE FUNCTION HERE to filter posts
+              onClick={() => applyFilter(category)}
+            >
+              {category}
+            </div>
+          ))}
         </div>
       </div>
 
@@ -627,7 +760,7 @@ export default function Dashboard() {
       )}
 
       {sharePostId && (
-        <div className="fixed inset-0  bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0  bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded shadow w-80">
             <h3 className="mb-4 text-lg font-bold text-center">Share Post</h3>
             <div className="flex justify-around mb-4">
