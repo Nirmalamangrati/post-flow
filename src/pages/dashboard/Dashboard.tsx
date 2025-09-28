@@ -366,15 +366,14 @@ export default function Dashboard() {
 
   async function handleAccept(requestId: string) {
     try {
-      const token = localStorage.getItem("token"); // get the JWT token
+      const token = localStorage.getItem("token");
       const res = await fetch(
-        // FIX: Added the missing forward slash after the port number 8000
         `http://localhost:8000/api/friends/accept/${requestId}`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`, // send token here
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -487,10 +486,8 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* FILTER BAR IMPLEMENTATION */}
       <div className="sticky filter-bar">
         <div className="flex">
-          {/* Default 'All' button to reset filter */}
           <div
             className={`mx-3 p-2 rounded cursor-pointer ${
               activeFilter === "all" ? "bg-blue-600 text-white" : "bg-blue-200"
