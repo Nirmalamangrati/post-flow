@@ -53,17 +53,20 @@ export default function Dashboard() {
     { _id: string; fromUserId: string; fromName: string }[]
   >([]);
   const [showFriendRequests, setShowFriendRequests] = useState(false);
-
+  //get friend request in dashboard
   useEffect(() => {
     async function fetchFriendRequests() {
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch("http://localhost:8000/api/friends/all", {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const res = await fetch(
+          "http://localhost:8000/api/friends/get-friend-requests",
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
@@ -391,10 +394,30 @@ export default function Dashboard() {
 
   async function handleReject(requestId: string) {
     try {
-      await fetch(`http://localhost:8000/friend-requests/reject/${requestId}`, {
-        method: "POST",
-      });
+      // Get token from localStorage
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("No auth token found");
+
+      // Call backend to remove friend
+      const res = await fetch(
+        `http://localhost:8000/api/friends/remove/${requestId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.msg || "Failed to remove friend");
+      }
+
+      // Remove from local state
       setFriendRequestsList((prev) => prev.filter((r) => r._id !== requestId));
+      console.log("Friend removed successfully");
     } catch (err) {
       console.error("Error rejecting friend request:", err);
     }
@@ -404,9 +427,7 @@ export default function Dashboard() {
     <div className="sticky top-0 ml-40 w-[calc(100%-280px)]  min-h-screen overflow-y-auto">
       <h1>Welcome {fullName}</h1>
       <p>You are: {userId}</p>
-      {/* New Parent Div to contain ALL three icons */}
       <div className="flex items-center gap-50">
-        {/* 1. Friend Request Icon and Dropdown (Keep it relative for the absolute dropdown) */}
         <div className="relative">
           <button onClick={toggleFriendRequests} className="p-2 ml-50 rounded">
             👥
@@ -418,7 +439,6 @@ export default function Dashboard() {
           </button>
 
           {showFriendRequests && (
-            // Note: I moved the dropdown to align right/end of the button
             <div className="absolute top-full right-0 mt-2 w-64 bg-white shadow-lg rounded-lg z-50">
               {friendRequestsList.length === 0 ? (
                 <p className="p-2 text-gray-500 text-sm">No friend requests</p>

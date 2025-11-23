@@ -14,12 +14,12 @@ const StatCard = ({ label, value }: StatCardProps) => (
 
 type Comment = { _id: string; text: string };
 type Post = {
-  [x: string]: string;
   _id: string;
   text: string;
   frame: string;
-  mediaUrl?: string;
-  mediaType?: string;
+  imageUrl: string;
+  mediaUrl: string;
+  mediaType: string;
   likes: number;
   likedByUser: boolean;
   comments: Comment[];
@@ -174,9 +174,15 @@ export default function Theme() {
 
   const handleLike = async (postId: string) => {
     try {
+      const token = localStorage.getItem("token");
+
       const res = await fetch(`http://localhost:8000/posts/${postId}/like`, {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
+
       const updatedPost = await res.json();
       setPosts((prev) => prev.map((p) => (p._id === postId ? updatedPost : p)));
     } catch (err) {

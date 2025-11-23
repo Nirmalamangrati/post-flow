@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 interface FriendRequestProps {
-  friendId: string;
+  userId: string;
 }
 
 interface User {
@@ -11,7 +11,7 @@ interface User {
 
 const API_BASE = "http://localhost:8000/api";
 
-const FriendRequest: React.FC<FriendRequestProps> = ({ friendId }) => {
+const FriendRequest: React.FC<FriendRequestProps> = ({ userId }) => {
   const [message, setMessage] = useState<string>("");
   const [fullName, setFullName] = useState<string>("");
   const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -25,7 +25,7 @@ const FriendRequest: React.FC<FriendRequestProps> = ({ friendId }) => {
     const token = getToken();
     if (!token) return;
     try {
-      const res = await fetch(`${API_BASE}/users/${friendId}`, {
+      const res = await fetch(`${API_BASE}/users/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch user");
@@ -64,19 +64,19 @@ const FriendRequest: React.FC<FriendRequestProps> = ({ friendId }) => {
   };
 
   useEffect(() => {
-    if (friendId) {
+    if (userId) {
       fetchUser();
     }
     fetchAllUsers();
-  }, [friendId]);
+  }, [userId]);
 
   // Send friend request
-  const sendRequestTo = async (friendId: string) => {
+  const sendRequestTo = async (userId: string) => {
     try {
       const token = getToken();
       if (!token) throw new Error("No auth token");
 
-      const res = await fetch(`${API_BASE}/friends/request/${friendId}`, {
+      const res = await fetch(`${API_BASE}/friends/request/${userId}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -99,7 +99,7 @@ const FriendRequest: React.FC<FriendRequestProps> = ({ friendId }) => {
       const token = getToken();
       if (!token) throw new Error("No auth token");
 
-      const res = await fetch(`${API_BASE}/friends/${userId}`, {
+      const res = await fetch(`${API_BASE}/removes/${userId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
