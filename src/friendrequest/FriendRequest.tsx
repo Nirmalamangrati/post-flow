@@ -99,7 +99,7 @@ const FriendRequest: React.FC<FriendRequestProps> = ({ userId }) => {
       const token = getToken();
       if (!token) throw new Error("No auth token");
 
-      const res = await fetch(`${API_BASE}/removes/${userId}`, {
+      const res = await fetch(`${API_BASE}/friends/removes/${userId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });

@@ -366,35 +366,30 @@ export default function Dashboard() {
       setIsSearching(false);
     }
   }
-
-  async function handleAccept(requestId: string) {
+  //Friend request accept
+  const handleAccept = async (friendId: string) => {
     try {
-      const token = localStorage.getItem("token");
       const res = await fetch(
-        `http://localhost:8000/api/friends/accept/${requestId}`,
+        `http://localhost:8000/api/friends/accept/${friendId}`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         }
       );
 
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
-      // Remove accepted request from list
-      setFriendRequestsList((prev) => prev.filter((r) => r._id !== requestId));
-    } catch (err) {
-      console.error("Error accepting friend request:", err);
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      const data = await res.json();
+      console.log("Friend request accepted:", data);
+    } catch (error) {
+      console.error("Error accepting friend request:", error);
     }
-  }
+  };
 
   async function handleReject(requestId: string) {
     try {
-      // Get token from localStorage
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No auth token found");
 
