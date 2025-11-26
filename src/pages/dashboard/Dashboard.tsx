@@ -436,14 +436,14 @@ export default function Dashboard() {
           {showFriendRequests && (
             <div className="absolute top-full right-0 mt-2 w-64 bg-white shadow-lg rounded-lg z-50">
               {friendRequestsList.length === 0 ? (
-                <p className="p-2 text-gray-500 text-sm">No friend requests</p>
+                <p className="p-4 text-gray-500 text-sm">No friend requests</p>
               ) : (
                 friendRequestsList.map((req) => (
                   <div
                     key={req._id}
                     className="flex justify-between items-center p-2 hover:bg-gray-100"
                   >
-                    <span>{req.fromName}</span>
+                    <span>{req.name}</span>
                     <div className="flex gap-2">
                       <button
                         className="text-green-500"
