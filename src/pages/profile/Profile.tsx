@@ -68,7 +68,7 @@ export default function Profile() {
       setImagePreview(URL.createObjectURL(file));
     }
   };
-
+  //profile image upload
   const handleUpload = async () => {
     if (!imageFile || !userId) {
       alert("Please select an image!");
@@ -84,21 +84,33 @@ export default function Profile() {
       const token = localStorage.getItem("token");
       const res = await fetch("http://localhost:8000/profilehandler", {
         method: "POST",
-        body: formData,
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token}`, // don't set Content-Type for FormData
         },
+        body: formData,
       });
+
       const data = await res.json();
 
-      setPosts([data.post, ...posts]);
-      setCaption("");
-      setImageFile(null);
-      setImagePreview(null);
-      setLastUploadedImageUrl(`${data.post.imageUrl}`);
+      if (!res.ok) {
+        console.error("Upload failed:", data);
+        alert("Upload failed. Check console for details.");
+        return;
+      }
+
+      if (!data || !data.imageUrl) {
+        console.error("Invalid response:", data);
+        alert("Upload failed. No image returned.");
+        return;
+      }
+
+      // Add new post to state safely
+      setPosts((prev) => [...prev, data]);
+      setImageFile(null); // reset input
+      setCaption(""); // reset caption
     } catch (err) {
-      alert(" upload post.");
-      console.error(err);
+      console.error("Upload error:", err);
+      alert("Something went wrong during upload.");
     }
   };
 
@@ -454,290 +466,293 @@ export default function Profile() {
 
       {/* Posts Section */}
       <div className="w-full max-w-xl px-4 space-y-6 relative">
-        {posts.map((post) => (
-          <div
-            key={post._id}
-            className="bg-white shadow rounded-lg p-4 space-y-2 border relative"
-          >
-            <div className="flex items-center space-x-3">
-              <img
-                src={post.imageUrl}
-                className="w-10 h-10 rounded-full border object-cover"
-                alt="profile"
-              />
-              <div>
-                <h4 className="font-semibold text-gray-800">You</h4>
-                <p className="text-sm text-gray-500">
-                  {new Date(post.createdAt).toLocaleString()}
-                </p>
+        {posts
+          .filter((post) => post && post.imageUrl)
+          .map((post, index) => (
+            <div
+              key={index}
+              className="bg-white shadow rounded-lg p-4 space-y-2 border relative"
+            >
+              <div className="flex items-center space-x-3">
+                <img
+                  src={post.imageUrl}
+                  className="w-10 h-10 rounded-full border object-cover"
+                  alt={post.caption || "Post image"}
+                />
+                <div>
+                  <h4 className="font-semibold text-gray-800">You</h4>
+                  <p className="text-sm text-gray-500">
+                    {new Date(post.createdAt).toLocaleString()}
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <div className="mt-2 relative">
-              {/* Editable caption */}
-              {editingPostId === post._id ? (
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-red-500"
-                  value={editingCaption}
-                  onChange={(e) => setEditingCaption(e.target.value)}
-                  onBlur={() => saveEdit(post._id!)}
+              <div className="mt-2 relative">
+                {/* Editable caption */}
+                {editingPostId === post._id ? (
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-red-500"
+                    value={editingCaption}
+                    onChange={(e) => setEditingCaption(e.target.value)}
+                    onBlur={() => saveEdit(post._id!)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        saveEdit(post._id!);
+                      } else if (e.key === "Escape") {
+                        cancelEdit();
+                      }
+                    }}
+                    autoFocus
+                  />
+                ) : (
+                  <p
+                    className="text-gray-700 text-base mb-2 cursor-text select-text"
+                    onDoubleClick={() =>
+                      post._id && startEditing(post._id, post.caption)
+                    }
+                    title="Double click to edit caption"
+                  >
+                    {post.caption}
+                  </p>
+                )}
+
+                {post.imageUrl || post.mediaUrl ? (
+                  <img
+                    src={post.imageUrl || post.mediaUrl}
+                    alt="Post"
+                    className="w-full rounded-lg object-cover border"
+                  />
+                ) : (
+                  <div className="w-full h-48 bg-gray-200 flex items-center justify-center text-gray-400">
+                    No image available
+                  </div>
+                )}
+
+                {/* Delete icon */}
+                <span
+                  onClick={() => post._id && deletePost(post._id)}
+                  className="absolute top-2 right-2 cursor-pointer text-red-600 text-xl select-none"
+                  title="Delete post"
+                  role="button"
+                  tabIndex={0}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      saveEdit(post._id!);
-                    } else if (e.key === "Escape") {
-                      cancelEdit();
+                    if (e.key === "Enter" || e.key === " ") {
+                      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+                      post._id && deletePost(post._id);
                     }
                   }}
-                  autoFocus
-                />
-              ) : (
-                <p
-                  className="text-gray-700 text-base mb-2 cursor-text select-text"
-                  onDoubleClick={() =>
-                    post._id && startEditing(post._id, post.caption)
-                  }
-                  title="Double click to edit caption"
                 >
-                  {post.caption}
-                </p>
-              )}
-
-              {post.imageUrl || post.mediaUrl ? (
-                <img
-                  src={post.imageUrl || post.mediaUrl}
-                  alt="Post"
-                  className="w-full rounded-lg object-cover border"
-                />
-              ) : (
-                <div className="w-full h-48 bg-gray-200 flex items-center justify-center text-gray-400">
-                  No image available
-                </div>
-              )}
-
-              {/* Delete icon */}
-              <span
-                onClick={() => post._id && deletePost(post._id)}
-                className="absolute top-2 right-2 cursor-pointer text-red-600 text-xl select-none"
-                title="Delete post"
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-                    post._id && deletePost(post._id);
-                  }
-                }}
-              >
-                🗑️
-              </span>
-            </div>
-
-            {/* Like, Comment, Share */}
-            <div className="flex space-x-6 mt-3">
-              <button
-                onClick={() => post._id && handleLike(post._id)}
-                className={`font-semibold ${
-                  post.likedByUser ? "text-red-600" : "text-gray-600"
-                }`}
-              >
-                ❤️ Like {post.likes ?? 0}
-              </button>
-              <button
-                onClick={() => post._id && toggleCommentBox(post._id)}
-                className="font-semibold text-gray-600"
-              >
-                💬 Comment
-              </button>
-              <button
-                onClick={() => post._id && toggleShareMenu(post._id)}
-                className="font-semibold text-gray-600 relative"
-              >
-                ↗️ Share
-              </button>
-            </div>
-
-            {/* Share menu */}
-            {sharePostId === post._id && (
-              <div className="absolute bg-white border rounded shadow p-2 mt-2 space-x-3 z-50 right-4">
-                <span
-                  onClick={() =>
-                    post._id &&
-                    openShareWindow(
-                      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
-                        buildPostUrl(post._id)
-                      )}`
-                    )
-                  }
-                  className="text-blue-600 font-bold cursor-pointer select-none"
-                >
-                  Facebook
-                </span>
-                <span
-                  onClick={() =>
-                    post._id &&
-                    openShareWindow(
-                      `https://twitter.com/intent/tweet?url=${encodeURIComponent(
-                        buildPostUrl(post._id)
-                      )}&text=${encodeURIComponent(post.caption)}`
-                    )
-                  }
-                  className="text-blue-400 font-bold cursor-pointer select-none"
-                >
-                  Twitter
-                </span>
-                <span
-                  onClick={() =>
-                    post._id &&
-                    openShareWindow(
-                      `https://wa.me/?text=${encodeURIComponent(
-                        buildPostUrl(post._id)
-                      )}`
-                    )
-                  }
-                  className="text-green-600 font-bold cursor-pointer select-none"
-                >
-                  WhatsApp
-                </span>
-                <span
-                  onClick={() =>
-                    post._id &&
-                    openShareWindow(
-                      `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(
-                        buildPostUrl(post._id)
-                      )}&title=${encodeURIComponent(post.caption)}`
-                    )
-                  }
-                  className="text-blue-700 font-bold cursor-pointer select-none"
-                >
-                  LinkedIn
+                  🗑️
                 </span>
               </div>
-            )}
 
-            {/* Comment box */}
-            {openCommentBoxPostId === post._id && (
-              <>
-                <div className="mt-2">
-                  <input
-                    id={`comment-input-${post._id}`}
-                    type="text"
-                    placeholder="Write a comment..."
-                    value={commentInputs[post._id ?? ""] || ""}
-                    onChange={(e) =>
-                      post._id && handleCommentChange(post._id, e.target.value)
+              {/* Like, Comment, Share */}
+              <div className="flex space-x-6 mt-3">
+                <button
+                  onClick={() => post._id && handleLike(post._id)}
+                  className={`font-semibold ${
+                    post.likedByUser ? "text-red-600" : "text-gray-600"
+                  }`}
+                >
+                  ❤️ Like {post.likes ?? 0}
+                </button>
+                <button
+                  onClick={() => post._id && toggleCommentBox(post._id)}
+                  className="font-semibold text-gray-600"
+                >
+                  💬 Comment
+                </button>
+                <button
+                  onClick={() => post._id && toggleShareMenu(post._id)}
+                  className="font-semibold text-gray-600 relative"
+                >
+                  ↗️ Share
+                </button>
+              </div>
+
+              {/* Share menu */}
+              {sharePostId === post._id && (
+                <div className="absolute bg-white border rounded shadow p-2 mt-2 space-x-3 z-50 right-4">
+                  <span
+                    onClick={() =>
+                      post._id &&
+                      openShareWindow(
+                        `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+                          buildPostUrl(post._id)
+                        )}`
+                      )
                     }
-                    onKeyDown={(e) =>
-                      post._id && handleCommentKeyPress(e, post._id)
+                    className="text-blue-600 font-bold cursor-pointer select-none"
+                  >
+                    Facebook
+                  </span>
+                  <span
+                    onClick={() =>
+                      post._id &&
+                      openShareWindow(
+                        `https://twitter.com/intent/tweet?url=${encodeURIComponent(
+                          buildPostUrl(post._id)
+                        )}&text=${encodeURIComponent(post.caption)}`
+                      )
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-red-500"
-                  />
+                    className="text-blue-400 font-bold cursor-pointer select-none"
+                  >
+                    Twitter
+                  </span>
+                  <span
+                    onClick={() =>
+                      post._id &&
+                      openShareWindow(
+                        `https://wa.me/?text=${encodeURIComponent(
+                          buildPostUrl(post._id)
+                        )}`
+                      )
+                    }
+                    className="text-green-600 font-bold cursor-pointer select-none"
+                  >
+                    WhatsApp
+                  </span>
+                  <span
+                    onClick={() =>
+                      post._id &&
+                      openShareWindow(
+                        `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(
+                          buildPostUrl(post._id)
+                        )}&title=${encodeURIComponent(post.caption)}`
+                      )
+                    }
+                    className="text-blue-700 font-bold cursor-pointer select-none"
+                  >
+                    LinkedIn
+                  </span>
                 </div>
+              )}
 
-                <div className="mt-4 space-y-2 max-h-40 overflow-y-auto">
-                  {(post.comments || []).map((comment) => {
-                    const isEditing =
-                      editingComment &&
-                      editingComment.postId === post._id &&
-                      editingComment.commentId === comment._id;
+              {/* Comment box */}
+              {openCommentBoxPostId === post._id && (
+                <>
+                  <div className="mt-2">
+                    <input
+                      id={`comment-input-${post._id}`}
+                      type="text"
+                      placeholder="Write a comment..."
+                      value={commentInputs[post._id ?? ""] || ""}
+                      onChange={(e) =>
+                        post._id &&
+                        handleCommentChange(post._id, e.target.value)
+                      }
+                      onKeyDown={(e) =>
+                        post._id && handleCommentKeyPress(e, post._id)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
 
-                    return (
-                      <div
-                        key={comment._id}
-                        className="bg-gray-100 p-2 rounded space-y-1  w-[calc(100%-280px)]"
-                      >
-                        {isEditing ? (
-                          <>
-                            <input
-                              type="text"
-                              className="w-full px-2 py-1 border rounded"
-                              value={editingComment.text}
-                              onChange={(e) =>
-                                setEditingComment((prev) =>
-                                  prev
-                                    ? { ...prev, text: e.target.value }
-                                    : null
-                                )
-                              }
-                              onKeyDown={async (e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  if (!editingComment) return;
-                                  await saveEditedComment(
-                                    editingComment.postId,
-                                    editingComment.commentId,
-                                    editingComment.text
-                                  );
-                                } else if (e.key === "Escape") {
-                                  cancelEditComment();
-                                }
-                              }}
-                              autoFocus
-                            />
-                            <div className="flex space-x-2 mt-1">
-                              <button
-                                className="text-green-600 font-semibold"
-                                onClick={() =>
-                                  editingComment &&
-                                  saveEditedComment(
-                                    editingComment.postId,
-                                    editingComment.commentId,
-                                    editingComment.text
+                  <div className="mt-4 space-y-2 max-h-40 overflow-y-auto">
+                    {(post.comments || []).map((comment) => {
+                      const isEditing =
+                        editingComment &&
+                        editingComment.postId === post._id &&
+                        editingComment.commentId === comment._id;
+
+                      return (
+                        <div
+                          key={comment._id}
+                          className="bg-gray-100 p-2 rounded space-y-1  w-[calc(100%-280px)]"
+                        >
+                          {isEditing ? (
+                            <>
+                              <input
+                                type="text"
+                                className="w-full px-2 py-1 border rounded"
+                                value={editingComment.text}
+                                onChange={(e) =>
+                                  setEditingComment((prev) =>
+                                    prev
+                                      ? { ...prev, text: e.target.value }
+                                      : null
                                   )
                                 }
-                              >
-                                Save
-                              </button>
-                              <button
-                                className="text-red-600 font-semibold"
-                                onClick={cancelEditComment}
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <p className="text-sm">{comment.text}</p>
-                            <p className="text-xs text-gray-400">
-                              {new Date(comment.createdAt).toLocaleString()}
-                            </p>
-                            <div className="flex space-x-3 mt-1">
-                              <button
-                                className="text-blue-600 text-xs underline"
-                                onClick={() =>
-                                  post._id &&
-                                  comment._id &&
-                                  startEditComment(
-                                    post._id,
-                                    comment._id,
-                                    comment.text
-                                  )
-                                }
-                              >
-                                ✏️
-                              </button>
-                              <button
-                                className="text-red-600 text-xs underline"
-                                onClick={() =>
-                                  post._id &&
-                                  comment._id &&
-                                  deleteComment(post._id, comment._id)
-                                }
-                              >
-                                🗑️
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </div>
-        ))}
+                                onKeyDown={async (e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    if (!editingComment) return;
+                                    await saveEditedComment(
+                                      editingComment.postId,
+                                      editingComment.commentId,
+                                      editingComment.text
+                                    );
+                                  } else if (e.key === "Escape") {
+                                    cancelEditComment();
+                                  }
+                                }}
+                                autoFocus
+                              />
+                              <div className="flex space-x-2 mt-1">
+                                <button
+                                  className="text-green-600 font-semibold"
+                                  onClick={() =>
+                                    editingComment &&
+                                    saveEditedComment(
+                                      editingComment.postId,
+                                      editingComment.commentId,
+                                      editingComment.text
+                                    )
+                                  }
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  className="text-red-600 font-semibold"
+                                  onClick={cancelEditComment}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-sm">{comment.text}</p>
+                              <p className="text-xs text-gray-400">
+                                {new Date(comment.createdAt).toLocaleString()}
+                              </p>
+                              <div className="flex space-x-3 mt-1">
+                                <button
+                                  className="text-blue-600 text-xs underline"
+                                  onClick={() =>
+                                    post._id &&
+                                    comment._id &&
+                                    startEditComment(
+                                      post._id,
+                                      comment._id,
+                                      comment.text
+                                    )
+                                  }
+                                >
+                                  ✏️
+                                </button>
+                                <button
+                                  className="text-red-600 text-xs underline"
+                                  onClick={() =>
+                                    post._id &&
+                                    comment._id &&
+                                    deleteComment(post._id, comment._id)
+                                  }
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
       </div>
     </div>
   );

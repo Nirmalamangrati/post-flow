@@ -420,11 +420,10 @@ export default function Dashboard() {
 
   return (
     <div className="sticky top-0 ml-40 w-[calc(100%-280px)]  min-h-screen overflow-y-auto">
-      <h1>Welcome {fullName}</h1>
-      <p>You are: {userId}</p>
+      <h1 className="text-xl text-bold">Welcome {fullName}</h1>
       <div className="flex items-center gap-50">
         <div className="relative">
-          <button onClick={toggleFriendRequests} className="p-2 ml-50 rounded">
+          <button onClick={toggleFriendRequests} className="p-4  ml-50 rounded">
             👥
             {friendRequestsList.length > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full px-1">
