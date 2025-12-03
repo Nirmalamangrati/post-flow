@@ -61,10 +61,16 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <div
-        className={`fixed top-0 left-0 h-screen w-full bg-gradient-to-b from-black via-[#3a0000] to-[#a30000] z-40 transform transition-transform
-          ${isOpen ? "translate-x-0" : "-translate-x-full"} md:${
-          isOpen ? "translate-x-0" : "-translate-x-[260px]"
-        }`}
+        className={`
+    fixed top-0 left-0 h-screen 
+    bg-gradient-to-b from-black via-[#3a0000] to-[#a30000]
+    z-40 transform transition-transform duration-300
+
+    w-full               /* mobile full width */
+    md:w-[300px]         /* desktop: 300px sidebar */
+
+    ${isOpen ? "translate-x-0" : "-translate-x-full"} 
+  `}
       >
         <div className="flex flex-col h-full justify-between py-6 relative">
           {/* Top Section */}
@@ -82,7 +88,7 @@ export default function Sidebar() {
                 <li key={item.label} className="px-4 relative">
                   <NavLink
                     to={item.to}
-                    onClick={() => setIsOpen(false)} // ✅ this closes sidebar
+                    onClick={() => setIsOpen(false)}
                     className={({ isActive }) =>
                       `flex items-center justify-center gap-4 text-base font-medium transition-all duration-200 ${
                         isActive
@@ -105,7 +111,7 @@ export default function Sidebar() {
             <hr className="border-t border-white/20 mx-4 mb-4" />
             <NavLink
               to="/login"
-              onClick={() => setIsOpen(false)} // ✅ logout click also hides sidebar
+              onClick={() => setIsOpen(false)}
               className="justify-center flex items-center gap-4 px-4 py-2 text-white hover:bg-white/10 rounded-lg transition"
             >
               <img

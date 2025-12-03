@@ -39,9 +39,9 @@ const Setting = () => {
         setNewPassword("");
         setConfirmPassword("");
       }
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      setMessage("Something went wrong.");
+      console.error(error);
+      setMessage("Server error. Please try again.");
     }
   };
 

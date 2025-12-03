@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 
 interface FriendRequestProps {
   userId: string;
+  currentFriends: { _id: string }[]; // friends to exclude from suggestions
 }
 
 interface User {
@@ -11,30 +12,13 @@ interface User {
 
 const API_BASE = "http://localhost:8000/api";
 
-const FriendRequest: React.FC<FriendRequestProps> = ({ userId }) => {
+const FriendRequest: React.FC<FriendRequestProps> = ({ currentFriends }) => {
   const [message, setMessage] = useState<string>("");
-  const [fullName, setFullName] = useState<string>("");
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState<boolean>(false);
   const [errorUsers, setErrorUsers] = useState<string | null>(null);
 
   const getToken = () => localStorage.getItem("token");
-
-  // Fetch selected user full name
-  const fetchUser = async () => {
-    const token = getToken();
-    if (!token) return;
-    try {
-      const res = await fetch(`${API_BASE}/users/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Failed to fetch user");
-      const data = await res.json();
-      setFullName(data.fullname || "No Name");
-    } catch {
-      setFullName("Unknown User");
-    }
-  };
 
   // Fetch all users
   const fetchAllUsers = async () => {
@@ -50,7 +34,6 @@ const FriendRequest: React.FC<FriendRequestProps> = ({ userId }) => {
 
       if (!res.ok) {
         const data = await res.json();
-        console.log("All users fetched:", data);
         throw new Error(data.msg || "Failed to fetch all users");
       }
 
@@ -64,11 +47,13 @@ const FriendRequest: React.FC<FriendRequestProps> = ({ userId }) => {
   };
 
   useEffect(() => {
-    if (userId) {
-      fetchUser();
-    }
     fetchAllUsers();
-  }, [userId]);
+  }, []);
+
+  // Filter users: exclude current friends
+  const filteredUsers = allUsers.filter(
+    (user) => !currentFriends.some((f) => f._id === user._id)
+  );
 
   // Send friend request
   const sendRequestTo = async (userId: string) => {
@@ -114,28 +99,23 @@ const FriendRequest: React.FC<FriendRequestProps> = ({ userId }) => {
   };
 
   return (
-    <div className="p-4 bg-white ml-200 rounded-lg shadow-md w-100 mx-auto text-center px-4 py-2">
+    <div className="text-center w-full ">
       <h3 className="text-lg font-semibold text-gray-800 mb-4">
         People you may know
       </h3>
 
-      {/* Display selected user full name */}
-      <span>{fullName}</span>
-
-      {/* Message alert */}
       {message && (
-        <p className="text-sm text-gray-700 bg-gray-100 px-3 py-2 rounded border border-gray-300">
+        <p className="text-sm text-gray-700 bg-gray-100 px-3 py-2 rounded border border-gray-300 mb-2">
           {message}
         </p>
       )}
 
-      {/* All users list */}
       {loadingUsers && <p>Loading users...</p>}
       {errorUsers && <p className="text-red-500">{errorUsers}</p>}
 
-      {!loadingUsers && !errorUsers && allUsers.length > 0 && (
+      {!loadingUsers && !errorUsers && filteredUsers.length > 0 && (
         <ul className="text-left max-h-48 overflow-auto p-2 rounded">
-          {allUsers.map((user) => (
+          {filteredUsers.map((user) => (
             <li
               key={user._id}
               className="py-2 flex justify-between items-center"
@@ -145,7 +125,7 @@ const FriendRequest: React.FC<FriendRequestProps> = ({ userId }) => {
               <div className="space-x-1">
                 <button
                   onClick={() => sendRequestTo(user._id)}
-                  className="bg-blue-700 hover:bg-blue-600 text-white px-2 py-1 rounded text-sm"
+                  className="bg-green-700 hover:bg-green-600 text-white px-2 py-1 rounded text-sm"
                 >
                   Send
                 </button>
@@ -159,6 +139,10 @@ const FriendRequest: React.FC<FriendRequestProps> = ({ userId }) => {
             </li>
           ))}
         </ul>
+      )}
+
+      {!loadingUsers && filteredUsers.length === 0 && (
+        <p className="text-gray-500">No suggestions available.</p>
       )}
     </div>
   );

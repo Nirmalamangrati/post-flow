@@ -1,4 +1,4 @@
-// components/AutoAdminLogin.tsx
+
 import { useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -21,14 +21,14 @@ const AutoAdminLogin = () => {
         const { token, user } = res.data;
         localStorage.setItem("token", token);
         localStorage.setItem("user", JSON.stringify(user));
-        navigate("/admin/dashboard"); // Redirect to admin dashboard
+        navigate("/admin/dashboard"); 
       })
       .catch((err) => {
         console.error("Admin auto-login failed:", err.response?.data?.message || err.message);
       });
   }, []);
 
-  return null; // You can return a loading spinner if you want
+  return null;
 };
 
 export default AutoAdminLogin;

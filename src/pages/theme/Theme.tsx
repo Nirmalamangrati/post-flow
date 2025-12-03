@@ -153,9 +153,11 @@ export default function Theme() {
     if (postMedia) formData.append("image", postMedia);
 
     try {
+      const token = localStorage.getItem("token");
       const res = await fetch("http://localhost:8000/theme-upload", {
         method: "POST",
         body: formData,
+        headers: { Authorization: `Bearer ${token}` },
       });
       const newPost = await res.json();
       setPosts((prev) => [newPost, ...prev]);
@@ -330,7 +332,7 @@ export default function Theme() {
   };
 
   return (
-    <div className="min-h-screen ml-70 p-4 relative">
+    <div className="fixed min-h-screen ml-[70px] p-6 top-0 bg-gray-50 rounded-2xl shadow-lg">
       <div className="flex flex-col md:flex-row gap-6">
         {/* Profile Card */}
         <div
@@ -501,12 +503,6 @@ export default function Theme() {
 
       {/* Posts */}
       <div className="mt-10">
-        <h2 className="text-xl font-semibold mb-4">
-          Your Posts {filterFrame !== "all" && `(Filtered)`}
-        </h2>
-        {filteredPosts.length === 0 && (
-          <p className="text-gray-400">No posts to show.</p>
-        )}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {filteredPosts.map((post) => (
             <div

@@ -414,8 +414,12 @@ export default function Profile() {
   }, [posts]);
 
   return (
-    <div className="min-h-screen ml-46 flex flex-col items-center py-8 space-y-6 relative overflow-y-auto top-0 left-1/2 transform -translate-x-1/2 w-full max-w-xl mx-auto">
-      {/* Show user full name here */}
+    <div
+      className="min-h-screen flex flex-col items-center py-10 space-y-6 
+                relative w-full max-w-3xl mx-auto
+                  bg-gradient-to-br from-white to-gray-100 rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.12)]
+                overflow-y-auto p-8"
+    >
       <h1 className="text-4xl font-bold mb-6">Welcome, {fullname}!</h1>
 
       {/* Upload Section */}
@@ -471,12 +475,12 @@ export default function Profile() {
           .map((post, index) => (
             <div
               key={index}
-              className="bg-white shadow rounded-lg p-4 space-y-2 border relative"
+              className="bg-white shadow rounded-lg p-4 space-y-2  relative"
             >
               <div className="flex items-center space-x-3">
                 <img
                   src={post.imageUrl}
-                  className="w-10 h-10 rounded-full border object-cover"
+                  className="w-10 h-10 rounded-full  object-cover"
                   alt={post.caption || "Post image"}
                 />
                 <div>
@@ -521,7 +525,7 @@ export default function Profile() {
                   <img
                     src={post.imageUrl || post.mediaUrl}
                     alt="Post"
-                    className="w-full rounded-lg object-cover border"
+                    className="w-full rounded-lg object-cover "
                   />
                 ) : (
                   <div className="w-full h-48 bg-gray-200 flex items-center justify-center text-gray-400">

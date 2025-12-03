@@ -40,7 +40,7 @@ function AppRoutes() {
         <Route path="chats" element={<Chats />} />
         <Route path="profile" element={<Profile />} />
         <Route path="theme" element={<Theme />} />
-        <Route path="notification" element={<Notification />} />
+        <Route path="notification" element={<Notification userId={""} />} />
         <Route path="settings" element={<Setting />} />
         <Route path="friends" element={<FriendList />} />
         <Route path="posts" element={<FriendsPosts />} />

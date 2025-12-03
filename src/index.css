@@ -1,1 +1,21 @@
 @import "tailwindcss";
+@keyframes pop {
+  0% {
+    transform: translateY(-10px) scale(0.9);
+    opacity: 0;
+    text-shadow: 0 0 0px #ff0000;
+  }
+  50% {
+    transform: translateY(5px) scale(1.05);
+    opacity: 1;
+    text-shadow: 2px 2px 10px #ff3b3b;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    text-shadow: 1px 1px 5px #ff3b3b;
+  }
+}
+
+.animate-pop {
+  animation: pop 0.8s ease-out forwards;
+}

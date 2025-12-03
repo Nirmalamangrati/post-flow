@@ -1,5 +1,4 @@
 import { useEffect, useState, type ChangeEvent } from "react";
-
 type CommentType = {
   _id: string;
   userId: string;
@@ -53,6 +52,8 @@ export default function Dashboard() {
     { _id: string; fromUserId: string; fromName: string }[]
   >([]);
   const [showFriendRequests, setShowFriendRequests] = useState(false);
+  const [menuOpen, setMenuOpen] = useState<string | null>(null);
+
   //get friend request in dashboard
   useEffect(() => {
     async function fetchFriendRequests() {
@@ -160,12 +161,16 @@ export default function Dashboard() {
 
   async function handleLike(postId: string) {
     try {
+      const token = localStorage.getItem("token");
+
       const res = await fetch(
-        `http://localhost:8000/dashboard/like/${postId}`,
+        `http://localhost:8000/dashboard/${postId}/like`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId }),
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         }
       );
 
@@ -174,9 +179,17 @@ export default function Dashboard() {
         return alert(err.error || "Failed to like/unlike post");
       }
 
+      // Get updated data from backend
       const updated = await res.json();
 
-      setPosts(posts.map((p) => (p._id === postId ? updated : p)));
+      // Update only likes/likedByUser, keep image, caption, etc.
+      setPosts(
+        posts.map((p) =>
+          p._id === postId
+            ? { ...p, likes: updated.likes, likedByUser: updated.likedByUser }
+            : p
+        )
+      );
     } catch (err) {
       console.error("Like error:", err);
       alert("Something went wrong while liking/unliking the post.");
@@ -419,11 +432,22 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="sticky top-0 ml-40 w-[calc(100%-280px)]  min-h-screen overflow-y-auto">
-      <h1 className="text-xl text-bold">Welcome {fullName}</h1>
-      <div className="flex items-center gap-50">
+    <div
+      className="sticky top-12 ml-40 w-[calc(100%-280px)] min-h-screen overflow-y-auto
+                bg-gradient-to-br from-white to-gray-100 rounded-2xl shadow-lg p-6"
+    >
+      <img
+        src="/postflow-logo1.png"
+        alt="PostFlow Logo"
+        className="absolute rounded-full shadow-lg left-2 top-5 h-10 animate-bounce"
+      />
+
+      {/* 
+      <h1 className="text-xl text-bold">Welcome {fullName}</h1> */}
+      <div className="flex items-center gap-30">
+        <span className="p-2 ml-45 text-2xl text-blue-600 font-bold">🏠</span>
         <div className="relative">
-          <button onClick={toggleFriendRequests} className="p-4  ml-50 rounded">
+          <button onClick={toggleFriendRequests} className="p-4  ml-8 rounded">
             👥
             {friendRequestsList.length > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full px-1">
@@ -464,9 +488,9 @@ export default function Dashboard() {
           )}
         </div>
 
-        <button className="p-2 rounded">💬</button>
+        <button className="p-2 rounded ml-12">💬</button>
 
-        <button className="p-2 rounded">🔔</button>
+        <button className="p-2 rounded ml-16">🔔</button>
       </div>
 
       <div className=" flex gap-4 items-center mb-3">
@@ -504,7 +528,7 @@ export default function Dashboard() {
         <div className="flex">
           <div
             className={`mx-3 p-2 rounded cursor-pointer ${
-              activeFilter === "all" ? "bg-blue-600 text-white" : "bg-blue-200"
+              activeFilter === "all" ? "bg-red-700 text-white" : "bg-red-400"
             }`}
             onClick={() => applyFilter("all")}
           >
@@ -517,8 +541,8 @@ export default function Dashboard() {
               key={category}
               className={`mx-3 p-2 rounded cursor-pointer capitalize ${
                 activeFilter === category
-                  ? "bg-blue-600 text-white"
-                  : "bg-blue-200"
+                  ? "bg-red-700 text-white"
+                  : "bg-red-400"
               }`}
               // CALL THE FUNCTION HERE to filter posts
               onClick={() => applyFilter(category)}
@@ -539,19 +563,89 @@ export default function Dashboard() {
         ) : (
           posts.map((post) => (
             <div key={post._id} className="p-4 rounded shadow bg-white">
-              <div className="flex justify-end gap-2 mb-2">
+              <div className="relative flex items-start justify-end">
+                {/* Three Dots Button */}
                 <button
-                  onClick={() => startEditingPost(post)}
-                  className="text-blue-600"
+                  onClick={() =>
+                    setMenuOpen(menuOpen === post._id ? null : post._id)
+                  }
+                  className="p-2 text-gray-600 hover:bg-gray-200 rounded-full"
                 >
-                  ✏️
+                  ...
                 </button>
-                <button
-                  onClick={() => deletePost(post._id)}
-                  className="text-red-600"
+
+                {/* Desktop Dropdown */}
+                <div className="hidden md:block">
+                  {menuOpen === post._id && (
+                    <div className="absolute right-0 mt-2 w-38 bg-white border rounded-lg shadow-lg z-20">
+                      <button
+                        onClick={() => {
+                          startEditingPost(post);
+                          setMenuOpen(null);
+                        }}
+                        className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-gray-100"
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        onClick={() => {
+                          deletePost(post._id);
+                          setMenuOpen(null);
+                        }}
+                        className="flex items-center gap-2 w-full px-3 py-2 text-left text-red-600 hover:bg-gray-100"
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Mobile Swipe Menu */}
+                <div
+                  className={`fixed top-0 right-0 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 z-30
+                      ${
+                        menuOpen === post._id
+                          ? "translate-x-0"
+                          : "translate-x-full"
+                      } md:hidden`}
                 >
-                  🗑️
-                </button>
+                  <div className="flex justify-end p-4">
+                    <button
+                      onClick={() => setMenuOpen(null)}
+                      className="text-gray-600"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="flex flex-col px-4 gap-3 mt-2">
+                    <button
+                      onClick={() => {
+                        startEditingPost(post);
+                        setMenuOpen(null);
+                      }}
+                      className="flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-100 rounded"
+                    >
+                      ✏️ Edit
+                    </button>
+                    <button
+                      onClick={() => {
+                        deletePost(post._id);
+                        setMenuOpen(null);
+                      }}
+                      className="flex items-center gap-2 px-3 py-2 text-left text-red-600 hover:bg-gray-100 rounded"
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
+                </div>
+
+                {/* Overlay */}
+                {menuOpen === post._id && (
+                  <div
+                    className="fixed inset-0 bg-black bg-opacity-20 z-20 md:hidden"
+                    onClick={() => setMenuOpen(null)}
+                  ></div>
+                )}
               </div>
 
               {editingPostId === post._id ? (
@@ -579,7 +673,11 @@ export default function Dashboard() {
                 </>
               ) : (
                 <>
-                  <p className="text-center font-semibold">{post.caption}</p>
+                  <p
+                    className="text-center font-semibold"
+                    dangerouslySetInnerHTML={{ __html: post.caption }}
+                  />
+
                   {post.createdAt && (
                     <p className="text-center text-sm text-gray-500">
                       Posted on {new Date(post.createdAt).toLocaleString()}
