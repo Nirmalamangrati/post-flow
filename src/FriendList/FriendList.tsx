@@ -54,14 +54,21 @@ const FriendList: React.FC = () => {
       const token = getToken();
       if (!token) throw new Error("No auth token");
 
-      const res = await fetch(`${API_BASE}/friends/${friendId}`, {
+      const userId = localStorage.getItem("userId"); // or wherever your logged-in user's ID is stored
+      if (!userId) throw new Error("No userId found");
+
+      const res = await fetch(`${API_BASE}/remove-friends/${friendId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId }), // <-- send userId in request body
       });
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.msg || "Failed to remove friend");
+        throw new Error(data.error || "Failed to remove friend");
       }
 
       setFriends((prev) => prev.filter((f) => f._id !== friendId));

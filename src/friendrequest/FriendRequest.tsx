@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 
 interface FriendRequestProps {
   userId: string;
-  currentFriends: { _id: string }[]; // friends to exclude from suggestions
+  currentFriends: { _id: string }[]; 
 }
 
 interface User {
@@ -50,7 +50,7 @@ const FriendRequest: React.FC<FriendRequestProps> = ({ currentFriends }) => {
     fetchAllUsers();
   }, []);
 
-  // Filter users: exclude current friends
+  // Filter users, exclude current friends
   const filteredUsers = allUsers.filter(
     (user) => !currentFriends.some((f) => f._id === user._id)
   );

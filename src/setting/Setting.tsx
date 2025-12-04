@@ -14,9 +14,15 @@ const Setting = () => {
       return;
     }
 
-    try {
-      const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token");
 
+    // ✅ ✅ THIS IS THE MISSING PROTECTION
+    if (!token) {
+      setMessage("Session expired. Please login again.");
+      return;
+    }
+
+    try {
       const response = await fetch(
         "http://localhost:8000/api/users/change-password",
         {
@@ -40,7 +46,7 @@ const Setting = () => {
         setConfirmPassword("");
       }
     } catch (error) {
-      console.error(error);
+      console.error("CHANGE PASSWORD ERROR:", error);
       setMessage("Server error. Please try again.");
     }
   };
@@ -50,23 +56,26 @@ const Setting = () => {
       <h2 className="text-3xl font-extrabold text-red-600 text-center animate-pulse">
         Change Password
       </h2>
+
       <form onSubmit={handleChangePassword} className="space-y-5">
         <input
           type="password"
-          className="w-full px-4 py-3 rounded-md bg-gray-300 text-red-400  placeholder-white focus:outline-none focus:ring-2 focus:ring-red-600"
+          className="w-full px-4 py-3 rounded-md bg-gray-300 text-red-400 placeholder-white focus:outline-none focus:ring-2 focus:ring-red-600"
           placeholder="Current Password"
           value={currentPassword}
           onChange={(e) => setCurrentPassword(e.target.value)}
           required
         />
+
         <input
           type="password"
-          className="w-full px-4 py-3 rounded-md bg-gray-300 text-red-400  placeholder-white focus:outline-none focus:ring-2 focus:ring-red-600"
+          className="w-full px-4 py-3 rounded-md bg-gray-300 text-red-400 placeholder-white focus:outline-none focus:ring-2 focus:ring-red-600"
           placeholder="New Password"
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
           required
         />
+
         <input
           type="password"
           className="w-full px-4 py-3 rounded-md bg-gray-300 text-red-400 placeholder-white focus:outline-none focus:ring-2 focus:ring-red-600"
@@ -75,6 +84,7 @@ const Setting = () => {
           onChange={(e) => setConfirmPassword(e.target.value)}
           required
         />
+
         <button
           type="submit"
           className="w-full py-3 rounded-md bg-red-700 text-white font-bold hover:bg-red-800 transition-colors duration-300"
@@ -82,6 +92,7 @@ const Setting = () => {
           Update Password
         </button>
       </form>
+
       {message && (
         <p className="text-center text-red-200 text-sm animate-fadeIn">
           {message}

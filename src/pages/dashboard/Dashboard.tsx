@@ -15,7 +15,11 @@ type Post = {
   comments: CommentType[];
   createdAt?: string;
 };
-
+interface Props {
+  posts: Post[];
+  handleLike: (postId: string) => void;
+  filterFrame: string;
+}
 // Define the available categories
 const categories = ["technology", "travel", "funny", "food", "lifestyle"];
 
@@ -178,11 +182,7 @@ export default function Dashboard() {
         const err = await res.json();
         return alert(err.error || "Failed to like/unlike post");
       }
-
-      // Get updated data from backend
       const updated = await res.json();
-
-      // Update only likes/likedByUser, keep image, caption, etc.
       setPosts(
         posts.map((p) =>
           p._id === postId
@@ -439,7 +439,7 @@ export default function Dashboard() {
       <img
         src="/postflow-logo1.png"
         alt="PostFlow Logo"
-        className="absolute rounded-full shadow-lg left-2 top-5 h-10 animate-bounce"
+        className="absolute rounded-full shadow-lg left-2 top-5 h-10 animate-bounce "
       />
 
       {/* 
@@ -524,10 +524,10 @@ export default function Dashboard() {
         </button>
       </div>
 
-      <div className="sticky filter-bar">
+      <div className="sticky filter-bar ">
         <div className="flex">
           <div
-            className={`mx-3 p-2 rounded cursor-pointer ${
+            className={`mx-3 p-2 rounded cursor-pointer  ${
               activeFilter === "all" ? "bg-red-700 text-white" : "bg-red-400"
             }`}
             onClick={() => applyFilter("all")}
@@ -683,11 +683,11 @@ export default function Dashboard() {
                       Posted on {new Date(post.createdAt).toLocaleString()}
                     </p>
                   )}
-                  <div className="flex justify-center mt-2">
+                  <div className="flex justify-center mt-2 w-full ">
                     {post.mediaType === "photo" && post.imageUrl && (
                       <img
                         src={post.imageUrl}
-                        className="max-h-60 rounded"
+                        className="w-[500px] h-[750px] object-cover rounded"
                         alt="post media"
                       />
                     )}

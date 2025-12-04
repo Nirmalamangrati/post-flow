@@ -404,7 +404,7 @@ export default function Profile() {
     if (storedName) {
       setFullname(storedName);
     }
-    fetchMyPost(); // <-- changed here to fetch user-specific posts with token
+    fetchMyPost();
   }, []);
 
   useEffect(() => {
