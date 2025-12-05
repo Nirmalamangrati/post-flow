@@ -237,7 +237,7 @@ export default function Theme() {
   };
 
   const buildPostUrl = (postId: string) =>
-    encodeURIComponent(`http://localhost:3000/post/${postId}`);
+    encodeURIComponent(`http://localhost:8000/post/${postId}`);
   const openShareWindow = (url: string) =>
     window.open(url, "_blank", "width=600,height=400");
 

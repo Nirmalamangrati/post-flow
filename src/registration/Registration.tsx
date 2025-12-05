@@ -60,14 +60,14 @@ const Registration = () => {
       if (res.status === 201) {
         toast.success("Registration successful!");
 
-        // ✅ Save user info to localStorage
-        localStorage.setItem("token", data.token); // ✅ Save token
+        //  Save user info to localStorage
+        localStorage.setItem("token", data.token);
         localStorage.setItem("fullname", formData.fullname);
         localStorage.setItem("email", formData.email);
         localStorage.setItem("dob", formData.dob);
         localStorage.setItem("phone", formData.phone);
 
-        // 🔁 Redirect to dashboard
+        //  Redirect to dashboard
         navigate("/dashboard");
 
         setFormData({
@@ -154,7 +154,6 @@ const Registration = () => {
               Login
             </Link>
           </p>
-          
         </form>
       </div>
     </div>
