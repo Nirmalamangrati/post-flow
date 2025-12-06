@@ -332,7 +332,7 @@ export default function Theme() {
   };
 
   return (
-    <div className="fixed min-h-screen ml-[70px] p-6 top-0 bg-gray-50 rounded-2xl shadow-lg">
+    <div className="relative min-h-screen ml-[70px] p-6 top-0 bg-gray-50 rounded-2xl shadow-lg">
       <div className="flex flex-col md:flex-row gap-6">
         {/* Profile Card */}
         <div

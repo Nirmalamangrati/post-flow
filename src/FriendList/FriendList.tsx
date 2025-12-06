@@ -86,7 +86,7 @@ const FriendList: React.FC = () => {
   const filteredFriends = friends.filter((friend) =>
     friend.fullName.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
+  console.log(filteredFriends);
   return (
     <div className="w-full max-w-3xl mx-auto mt-5 p-5 bg-gradient-to-br from-white to-gray-100 rounded-2xl shadow-[0px_5px_20px_rgba(0,0,0,0.15)] border border-gray-200">
       <nav className="bg-red-700 text-white w-full flex justify-between items-center px-6 py-3 shadow-md rounded-md">

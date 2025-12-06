@@ -684,13 +684,13 @@ export default function Dashboard() {
                     </p>
                   )}
                   <div className="flex justify-center mt-2 w-full ">
-                    {post.mediaType === "photo" && post.imageUrl && (
-                      <img
-                        src={post.imageUrl}
-                        className="w-[500px] h-[750px] object-cover rounded"
-                        alt="post media"
-                      />
-                    )}
+                    {/* {post.mediaType === "photo" && post.imageUrl && ( */}
+                    <img
+                      src={post.imageUrl}
+                      className="w-[500px] h-[750px] object-cover rounded"
+                      alt="post media"
+                    />
+                    {/* )} */}
                     {post.mediaType === "video" && post.imageUrl && (
                       <video
                         src={post.imageUrl}
