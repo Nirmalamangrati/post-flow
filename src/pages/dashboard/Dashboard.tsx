@@ -1,7 +1,13 @@
 import { useEffect, useState, type ChangeEvent } from "react";
+type User = {
+  _id: string;
+  fullname: string;
+  profilePic?: string;
+};
+
 type CommentType = {
   _id: string;
-  userId: string;
+  userId: User;
   text: string;
 };
 
@@ -17,6 +23,7 @@ type Post = {
 };
 interface Props {
   posts: Post[];
+  userId: string;
   handleLike: (postId: string) => void;
   filterFrame: string;
 }
@@ -725,7 +732,7 @@ export default function Dashboard() {
                     />
                     <button
                       onClick={() => handleComment(post._id)}
-                      className="text-green-600"
+                      className="text-green-600 cursor-pointer"
                     >
                       💬
                     </button>
@@ -739,59 +746,68 @@ export default function Dashboard() {
 
                   <ul className="mt-2 ml-3 text-sm text-gray-700">
                     {post.comments?.map((c) => (
-                      <li key={c._id} className="mb-1">
-                        <b>{c.userId}</b>:{" "}
-                        {editingCommentId === c._id ? (
-                          <>
-                            <input
-                              type="text"
-                              value={commentEditMap[c._id] || ""}
-                              onChange={(e) =>
-                                setCommentEditMap({
-                                  ...commentEditMap,
-                                  [c._id]: e.target.value,
-                                })
-                              }
-                              className="border px-1 py-0.5 rounded mr-2"
-                            />
-                            <button
-                              onClick={() => saveEditedComment(post._id, c._id)}
-                              className="text-green-600 mr-2"
-                            >
-                              Save
-                            </button>
-                            <button
-                              onClick={cancelEditing}
-                              className="text-red-600"
-                            >
-                              Cancel
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            {c.text}{" "}
-                            {c.userId === userId && (
-                              <>
-                                <button
-                                  onClick={() =>
-                                    startEditingComment(c._id, c.text)
-                                  }
-                                  className="text-blue-600 ml-2"
-                                >
-                                  ✏️
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    handleDeleteComment(post._id, c._id)
-                                  }
-                                  className="text-red-600 ml-1"
-                                >
-                                  🗑️
-                                </button>
-                              </>
-                            )}
-                          </>
-                        )}
+                      <li key={c._id} className="mb-1 flex items-start">
+                        <img
+                          src={c.userId?.profilePic || "/default-profile.png"}
+                          alt="Profile"
+                          className="w-8 h-8 rounded-full mr-2 mt-0.5"
+                        />
+                        <div>
+                          <b>{c.userId?.fullname || "Unknown User"}</b>:{" "}
+                          {c.text}
+                          {editingCommentId === c._id ? (
+                            <>
+                              <input
+                                type="text"
+                                value={commentEditMap[c._id] || ""}
+                                onChange={(e) =>
+                                  setCommentEditMap({
+                                    ...commentEditMap,
+                                    [c._id]: e.target.value,
+                                  })
+                                }
+                                className="border px-1 py-0.5 rounded mr-2"
+                              />
+                              <button
+                                onClick={() =>
+                                  saveEditedComment(post._id, c._id)
+                                }
+                                className="text-green-600 mr-2"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={cancelEditing}
+                                className="text-red-600"
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              {c.userId?._id === userId && (
+                                <>
+                                  <button
+                                    onClick={() =>
+                                      startEditingComment(c._id, c.text)
+                                    }
+                                    className="text-blue-600 ml-2"
+                                  >
+                                    ✏️
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      handleDeleteComment(post._id, c._id)
+                                    }
+                                    className="text-red-600 ml-1"
+                                  >
+                                    🗑️
+                                  </button>
+                                </>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </li>
                     ))}
                   </ul>
