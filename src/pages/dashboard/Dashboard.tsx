@@ -745,7 +745,7 @@ export default function Dashboard() {
                   </div>
 
                   <ul className="mt-2 ml-3 text-sm text-gray-700">
-                    {post.comments?.map((c) => (
+                    {post.comments?.slice(0, 3).map((c) => (
                       <li key={c._id} className="mb-1 flex items-start">
                         <img
                           src={c.userId?.profilePic || "/default-profile.png"}
