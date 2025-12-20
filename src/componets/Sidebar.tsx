@@ -62,7 +62,7 @@ export default function Sidebar() {
       {/* Sidebar */}
       <div
         className={`
-    fixed top-0 left-0 h-screen 
+    fixed top-10 left-0 h-175
     bg-gradient-to-b from-black via-[#3a0000] to-[#a30000]
     z-40 transform transition-transform duration-300
 

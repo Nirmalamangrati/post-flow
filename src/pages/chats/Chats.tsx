@@ -36,7 +36,10 @@ export default function ChatWindow() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#050608]">
+    <div
+      className="flex flex-col h-full bg-gradient-to-b from-black via-[#3a0000] to-[#a30000]
+    z-40 transform transition-transform duration-300"
+    >
       {/* Header */}
       <div className="px-4 py-3 border-b border-gray-800 flex items-center gap-3">
         <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center text-sm font-semibold">
@@ -76,14 +79,14 @@ export default function ChatWindow() {
       </div>
 
       {/* Input area */}
-      <div className="px-3 py-3 border-t border-gray-800 flex items-center gap-2">
+      <div className="px-3 py-3  border-t border-gray-800 flex items-center gap-2">
         <button className="w-9 h-9 rounded-full bg-[#15171c] flex items-center justify-center text-lg text-gray-300">
           +
         </button>
 
         <div className="flex-1 flex items-center bg-[#15171c] rounded-full px-3">
           <input
-            className="flex-1 bg-transparent outline-none text-sm text-gray-100 placeholder:text-gray-500"
+            className="flex-1 h-8 bg-transparent outline-none text-sm text-gray-100 placeholder:text-gray-500"
             placeholder="Message..."
             value={input}
             onChange={(e) => setInput(e.target.value)}

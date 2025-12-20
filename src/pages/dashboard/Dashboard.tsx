@@ -66,6 +66,7 @@ export default function Dashboard() {
   >([]);
   const [showFriendRequests, setShowFriendRequests] = useState(false);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   //get friend request in dashboard
   useEffect(() => {
@@ -508,7 +509,12 @@ export default function Dashboard() {
           )}
         </div>
 
-        <button className="p-2 rounded ml-12 cursor-pointer">💬</button>
+        <button
+          onClick={() => setIsChatOpen(!isChatOpen)}
+          className="p-2 rounded ml-12 cursor-pointer"
+        >
+          💬
+        </button>
 
         <button className="p-2 rounded ml-16">🔔</button>
       </div>
@@ -830,11 +836,11 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div className="fixed right-4 top-8 w-70 h-[700px] bg-white shadow-lg rounded-lg overflow-hidden">
-        <div className="w-full h-full flex flex-col">
+      {isChatOpen && (
+        <div className="w-80 h-180 bg-gray-100 p-4 border-l border-gray-200 fixed top-8 right-0  bottom-4 shadow-lg rounded">
           <ChatWindow />
         </div>
-      </div>
+      )}
 
       {isModalOpen && (
         <div className="fixed top-1/2 left-1/2 bg-white border shadow rounded w-[400px] p-4 z-50 transform -translate-x-1/2 -translate-y-1/2">
