@@ -1,4 +1,5 @@
 import { useEffect, useState, type ChangeEvent } from "react";
+import ChatWindow from "../chats/Chats";
 type User = {
   _id: string;
   fullname: string;
@@ -6,6 +7,7 @@ type User = {
 };
 
 type CommentType = {
+  user: any;
   _id: string;
   userId: User;
   text: string;
@@ -28,7 +30,7 @@ interface Props {
   filterFrame: string;
 }
 // Define the available categories
-const categories = ["technology", "travel", "funny", "food", "lifestyle"];
+// const categories = ["technology", "travel", "funny", "food", "lifestyle"];
 
 export default function Dashboard() {
   const [caption, setCaption] = useState("");
@@ -440,7 +442,7 @@ export default function Dashboard() {
 
   return (
     <div
-      className="sticky top-12 ml-40 w-[calc(100%-280px)] min-h-screen overflow-y-auto
+      className="sticky top-12 ml-32 w-[calc(100%-280px)] min-h-screen overflow-y-auto
                 bg-gradient-to-br from-white to-gray-100 rounded-2xl shadow-lg p-6"
     >
       <img
@@ -452,12 +454,23 @@ export default function Dashboard() {
       {/* 
       <h1 className="text-xl text-bold">Welcome {fullName}</h1> */}
       <div className="flex items-center gap-30">
-        <span className="p-2 ml-45 text-2xl text-blue-600 font-bold">🏠</span>
+        <span
+          className={`p-2 ml-45 text-2xl text-blue-600 font-bold cursor-pointer ${
+            activeFilter === "all" ? " text-white" : "bg-red-400"
+          }`}
+          onClick={() => applyFilter("all")}
+        >
+          🏠
+        </span>
+
         <div className="relative">
-          <button onClick={toggleFriendRequests} className="p-4  ml-8 rounded">
+          <button
+            onClick={toggleFriendRequests}
+            className="p-4  ml-8 rounded cursor-pointer"
+          >
             👥
             {friendRequestsList.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full px-1">
+              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full px-1 ">
                 {friendRequestsList.length}
               </span>
             )}
@@ -495,7 +508,7 @@ export default function Dashboard() {
           )}
         </div>
 
-        <button className="p-2 rounded ml-12">💬</button>
+        <button className="p-2 rounded ml-12 cursor-pointer">💬</button>
 
         <button className="p-2 rounded ml-16">🔔</button>
       </div>
@@ -533,17 +546,17 @@ export default function Dashboard() {
 
       <div className="sticky filter-bar ">
         <div className="flex">
-          <div
+          {/* <div
             className={`mx-3 p-2 rounded cursor-pointer  ${
               activeFilter === "all" ? "bg-red-700 text-white" : "bg-red-400"
             }`}
             onClick={() => applyFilter("all")}
           >
             All Posts
-          </div>
+          </div> */}
 
           {/* Mapping the defined categories */}
-          {categories.map((category) => (
+          {/* {categories.map((category) => (
             <div
               key={category}
               className={`mx-3 p-2 rounded cursor-pointer capitalize ${
@@ -556,7 +569,7 @@ export default function Dashboard() {
             >
               {category}
             </div>
-          ))}
+          ))} */}
         </div>
       </div>
 
@@ -748,13 +761,12 @@ export default function Dashboard() {
                     {post.comments?.slice(0, 3).map((c) => (
                       <li key={c._id} className="mb-1 flex items-start">
                         <img
-                          src={c.userId?.profilePic || "/default-profile.png"}
+                          src={c.user?.profilePic || "/default-profile.png"}
                           alt="Profile"
                           className="w-8 h-8 rounded-full mr-2 mt-0.5"
                         />
                         <div>
-                          <b>{c.userId?.fullname || "Unknown User"}</b>:{" "}
-                          {c.text}
+                          <b>{c.user?.fullname || "Unknown User"}</b>: {c.text}
                           {editingCommentId === c._id ? (
                             <>
                               <input
@@ -816,6 +828,12 @@ export default function Dashboard() {
             </div>
           ))
         )}
+      </div>
+
+      <div className="fixed right-4 top-8 w-70 h-[700px] bg-white shadow-lg rounded-lg overflow-hidden">
+        <div className="w-full h-full flex flex-col">
+          <ChatWindow />
+        </div>
       </div>
 
       {isModalOpen && (

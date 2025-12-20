@@ -67,12 +67,12 @@ export default function Sidebar() {
     z-40 transform transition-transform duration-300
 
     w-full               /* mobile full width */
-    md:w-[300px]         /* desktop: 300px sidebar */
+    md:w-[270px]         /* desktop: 300px sidebar */
 
     ${isOpen ? "translate-x-0" : "-translate-x-full"} 
   `}
       >
-        <div className="flex flex-col h-full justify-between py-6 relative">
+        <div className="flex flex-col h-full justify-between py-4 relative">
           {/* Top Section */}
           <div>
             <div className="text-center mb-6">
