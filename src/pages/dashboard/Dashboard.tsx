@@ -207,20 +207,33 @@ export default function Dashboard() {
   }
 
   async function handleComment(postId: string) {
+    const token = localStorage.getItem("token");
     const commentText = commentTextMap[postId];
     if (!commentText || !commentText.trim()) return;
 
-    const res = await fetch(
-      `http://localhost:8000/dashboard/comment/${postId}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, text: commentText }),
-      }
-    );
-    const updated = await res.json();
-    setPosts(posts.map((p) => (p._id === postId ? updated : p)));
-    setCommentTextMap({ ...commentTextMap, [postId]: "" });
+    try {
+      const res = await fetch(
+        `http://localhost:8000/dashboard/comment/${postId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ text: commentText }),
+        }
+      );
+
+      const updated = await res.json();
+      setPosts(
+        posts.map((p) =>
+          p._id === postId ? { ...p, comments: updated.comments } : p
+        )
+      );
+      setCommentTextMap({ ...commentTextMap, [postId]: "" });
+    } catch (err) {
+      console.error("Failed to add comment:", err);
+    }
   }
 
   async function handleDeleteComment(postId: string, commentId: string) {
@@ -764,13 +777,18 @@ export default function Dashboard() {
                   </div>
 
                   <ul className="mt-2 ml-3 text-sm text-gray-700">
-                    {post.comments?.slice(0, 3).map((c) => (
+                    {post.comments?.map((c) => (
                       <li key={c._id} className="mb-1 flex items-start">
                         <img
-                          src={c.user?.profilePic || "/default-profile.png"}
+                          src={
+                            c.user && c.user.profilePic
+                              ? c.user.profilePic
+                              : "/default-profile.png"
+                          }
                           alt="Profile"
                           className="w-8 h-8 rounded-full mr-2 mt-0.5"
                         />
+
                         <div>
                           <b>{c.user?.fullname || "Unknown User"}</b>: {c.text}
                           {editingCommentId === c._id ? (
