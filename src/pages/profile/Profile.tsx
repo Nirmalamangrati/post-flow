@@ -85,7 +85,7 @@ export default function Profile() {
       const res = await fetch("http://localhost:8000/profilehandler", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`, // don't set Content-Type for FormData
+          Authorization: `Bearer ${token}`, 
         },
         body: formData,
       });
@@ -242,7 +242,7 @@ export default function Profile() {
 
   const saveEdit = async (postId: string) => {
     try {
-      const token = localStorage.getItem("token"); // Get JWT token
+      const token = localStorage.getItem("token"); 
 
       const res = await fetch(
         `http://localhost:8000/profilehandler/${postId}`,

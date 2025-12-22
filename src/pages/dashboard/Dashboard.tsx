@@ -67,6 +67,11 @@ export default function Dashboard() {
   const [showFriendRequests, setShowFriendRequests] = useState(false);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  const [commentInputOpen, setCommentInputOpen] = useState<{
+    [key: string]: boolean;
+  }>({});
 
   //get friend request in dashboard
   useEffect(() => {
@@ -230,6 +235,7 @@ export default function Dashboard() {
           p._id === postId ? { ...p, comments: updated.comments } : p
         )
       );
+
       setCommentTextMap({ ...commentTextMap, [postId]: "" });
     } catch (err) {
       console.error("Failed to add comment:", err);
@@ -240,18 +246,33 @@ export default function Dashboard() {
     if (!window.confirm("Are you sure you want to delete this comment?"))
       return;
 
-    const res = await fetch(
-      `http://localhost:8000/dashboard/comment/${postId}/${commentId}`,
-      {
-        method: "DELETE",
+    const token = localStorage.getItem("token");
+
+    try {
+      const res = await fetch(
+        `http://localhost:8000/dashboard/comment/${postId}/${commentId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (res.ok) {
+        const updated = await res.json();
+        setPosts(
+          posts.map((p) =>
+            p._id === postId ? { ...p, comments: updated.comments } : p
+          )
+        );
+        if (editingCommentId === commentId) setEditingCommentId(null);
+      } else {
+        const errorData = await res.json();
+        alert(errorData.msg || "Failed to delete comment");
       }
-    );
-    if (res.ok) {
-      const updated = await res.json();
-      setPosts(posts.map((p) => (p._id === postId ? updated : p)));
-      if (editingCommentId === commentId) setEditingCommentId(null);
-    } else {
-      alert("Failed to delete comment");
+    } catch (err) {
+      console.error("Failed to delete comment:", err);
     }
   }
 
@@ -269,21 +290,35 @@ export default function Dashboard() {
     if (!newText || !newText.trim())
       return alert("Comment text cannot be empty");
 
-    const res = await fetch(
-      `http://localhost:8000/dashboard/comment/${postId}/${commentId}`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: newText }),
-      }
-    );
+    const token = localStorage.getItem("token");
 
-    if (res.ok) {
-      const updated = await res.json();
-      setPosts(posts.map((p) => (p._id === postId ? updated : p)));
-      setEditingCommentId(null);
-    } else {
-      alert("Failed to update comment");
+    try {
+      const res = await fetch(
+        `http://localhost:8000/dashboard/comment/${postId}/${commentId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ text: newText }),
+        }
+      );
+
+      if (res.ok) {
+        const updated = await res.json();
+        setPosts(
+          posts.map((p) =>
+            p._id === postId ? { ...p, comments: updated.comments } : p
+          )
+        );
+        setEditingCommentId(null);
+      } else {
+        const errorData = await res.json();
+        alert(errorData.msg || "Failed to update comment");
+      }
+    } catch (err) {
+      console.error("Failed to update comment:", err);
     }
   }
 
@@ -616,7 +651,7 @@ export default function Dashboard() {
                 {/* Desktop Dropdown */}
                 <div className="hidden md:block">
                   {menuOpen === post._id && (
-                    <div className="absolute right-0 mt-2 w-38 bg-white border rounded-lg shadow-lg z-20">
+                    <div className="absolute right-0 top-full mt-2 w-38 bg-white  rounded-lg shadow-lg z-10">
                       <button
                         onClick={() => {
                           startEditingPost(post);
@@ -745,6 +780,7 @@ export default function Dashboard() {
                     >
                       ❤️ Like ({post.likes})
                     </button>
+
                     <input
                       value={commentTextMap[post._id] || ""}
                       onChange={(e) =>
@@ -753,24 +789,35 @@ export default function Dashboard() {
                           [post._id]: e.target.value,
                         })
                       }
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleComment(post._id);
-                        }
-                      }}
                       placeholder="Add comment..."
                       className="px-2 py-1 rounded flex-1"
+                      disabled={!commentInputOpen[post._id]}
                     />
+
                     <button
-                      onClick={() => handleComment(post._id)}
-                      className="text-green-600 cursor-pointer"
+                      onClick={() => {
+                        if (!commentInputOpen[post._id]) {
+                          setCommentInputOpen({
+                            ...commentInputOpen,
+                            [post._id]: true,
+                          });
+                          return;
+                        }
+
+                        handleComment(post._id);
+                        setCommentInputOpen({
+                          ...commentInputOpen,
+                          [post._id]: false,
+                        });
+                      }}
+                      className="text-black cursor-pointer ml-2"
                     >
-                      💬
+                      💬Comment
                     </button>
+
                     <button
                       onClick={() => openShareModal(post._id)}
-                      className="text-blue-600"
+                      className="text-blue-600 cursor-pointer"
                     >
                       ↗️ Share
                     </button>
@@ -778,18 +825,13 @@ export default function Dashboard() {
 
                   <ul className="mt-2 ml-3 text-sm text-gray-700">
                     {post.comments?.map((c) => (
-                      <li key={c._id} className="mb-1 flex items-start">
+                      <li key={c._id} className="mb-1 flex items-center ml-80">
                         <img
-                          src={
-                            c.user && c.user.profilePic
-                              ? c.user.profilePic
-                              : "/default-profile.png"
-                          }
+                          src={c.user?.profilePic || "/default-profile.png"}
                           alt="Profile"
                           className="w-8 h-8 rounded-full mr-2 mt-0.5"
                         />
-
-                        <div>
+                        <div className=" relative  justify-center items-center">
                           <b>{c.user?.fullname || "Unknown User"}</b>: {c.text}
                           {editingCommentId === c._id ? (
                             <>
@@ -821,25 +863,42 @@ export default function Dashboard() {
                             </>
                           ) : (
                             <>
-                              {c.userId?._id === userId && (
-                                <>
+                              {c.userId && c.userId.toString() === userId && (
+                                <div className="inline-block relative ml-2">
+                                  {/* 3-dot button */}
                                   <button
                                     onClick={() =>
-                                      startEditingComment(c._id, c.text)
+                                      setOpenMenuId(
+                                        openMenuId === c._id ? null : c._id
+                                      )
                                     }
-                                    className="text-blue-600 ml-2"
+                                    className="text-gray-500 w-10"
                                   >
-                                    ✏️
+                                    ⋯
                                   </button>
-                                  <button
-                                    onClick={() =>
-                                      handleDeleteComment(post._id, c._id)
-                                    }
-                                    className="text-red-600 ml-1"
-                                  >
-                                    🗑️
-                                  </button>
-                                </>
+
+                                  {/* Edit/Delete menu */}
+                                  {openMenuId === c._id && (
+                                    <div className="absolute top-0 left-8 bg-white rounded shadow-md flex flex-row z-10">
+                                      <button
+                                        onClick={() =>
+                                          startEditingComment(c._id, c.text)
+                                        }
+                                        className="text-blue-600 px-2 py-1"
+                                      >
+                                        ✏️ Edit
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          handleDeleteComment(post._id, c._id)
+                                        }
+                                        className="text-red-600 px-2 py-1"
+                                      >
+                                        🗑️ Delete
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
                               )}
                             </>
                           )}
