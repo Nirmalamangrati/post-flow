@@ -15,9 +15,10 @@ const StatCard = ({ label, value }: StatCardProps) => (
 type Comment = { _id: string; text: string };
 type Post = {
   _id: string;
-  text: string;
+  caption: string;
   frame: string;
-  imageUrl: string;
+  frameColor: string;
+  imageUrl?: string;
   mediaUrl: string;
   mediaType: string;
   likes: number;
@@ -49,6 +50,7 @@ export default function Theme() {
 
   const [profileFrame, setProfileFrame] = useState("frame1");
   const [selectedFrame, setSelectedFrame] = useState("frame1");
+  const [frameColor, setFrameColor] = useState("#ec4899");
   const [postText, setPostText] = useState("");
   const [postMedia, setPostMedia] = useState<File | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -150,6 +152,7 @@ export default function Theme() {
     const formData = new FormData();
     formData.append("caption", postText);
     formData.append("frame", selectedFrame);
+    formData.append("frameColor", frameColor);
     if (postMedia) formData.append("image", postMedia);
 
     try {
@@ -159,8 +162,9 @@ export default function Theme() {
         body: formData,
         headers: { Authorization: `Bearer ${token}` },
       });
-      const newPost = await res.json();
-      setPosts((prev) => [newPost, ...prev]);
+      const data = await res.json();
+      setPosts((prev) => [{ ...data.post, frame: selectedFrame }, ...prev]);
+
       setPostText("");
       setPostMedia(null);
       if (editorRef.current) editorRef.current.innerHTML = "";
@@ -172,7 +176,7 @@ export default function Theme() {
   const filteredPosts =
     filterFrame === "all"
       ? posts
-      : posts.filter((p) => p.frame === filterFrame);
+      : posts.filter((p) => p.frame && p.frame === filterFrame);
 
   const handleLike = async (postId: string) => {
     try {
@@ -243,7 +247,7 @@ export default function Theme() {
 
   const startEditingPost = (post: Post) => {
     setEditingPostId(post._id);
-    setEditingPostText(post.text);
+    setEditingPostText(post.caption);
   };
   const cancelEditingPost = () => {
     setEditingPostId(null);
@@ -502,30 +506,31 @@ export default function Theme() {
       </div>
 
       {/* Posts */}
-      <div className="mt-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="grid grid-cols-1 gap-6 w-full max-w-2xl">
           {filteredPosts.map((post) => (
             <div
               key={post._id}
-              className={`p-4 rounded-lg border-4 shadow-lg relative ${
-                frames.find((f) => f._id === post.frame)?.style
+              className={`p-4 rounded-lg  shadow-lg relative ${
+                frames.find((f) => f._id === post.frame)?.style || ""
               }`}
               style={{
-                borderColor: frames.find((f) => f._id === post.frame)
-                  ?.borderColor,
+                borderColor:
+                  frames.find((f) => f._id === post.frame)?.borderColor ||
+                  "#000",
               }}
             >
               <div className="flex justify-between items-center mb-2">
                 {editingPostId === post._id ? (
-                  <textarea
+                  <input
+                    type="text"
                     value={editingPostText}
                     onChange={(e) => setEditingPostText(e.target.value)}
                     className="w-full border rounded p-2"
-                    rows={3}
                   />
                 ) : (
                   <div
-                    dangerouslySetInnerHTML={{ __html: post.text }}
+                    dangerouslySetInnerHTML={{ __html: post.caption }}
                     className="mb-2"
                   />
                 )}
@@ -564,17 +569,17 @@ export default function Theme() {
                 </div>
               </div>
 
-              {post.mediaUrl && (
+              {post.imageUrl && (
                 <div className="mb-2">
                   {isVideo(post) ? (
                     <video
-                      src={post.mediaUrl}
+                      src={post.imageUrl}
                       controls
                       className="max-w-full rounded"
                     />
                   ) : (
                     <img
-                      src={post.mediaUrl}
+                      src={post.imageUrl}
                       alt="Post media"
                       className="max-w-full rounded"
                     />

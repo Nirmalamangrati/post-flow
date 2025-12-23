@@ -229,14 +229,20 @@ export default function Dashboard() {
         }
       );
 
-      const updated = await res.json();
-      setPosts(
-        posts.map((p) =>
-          p._id === postId ? { ...p, comments: updated.comments } : p
-        )
+      if (!res.ok) throw new Error("Comment failed");
+
+      const updatedComment = await res.json();
+      console.log("Updated Post after comment:", updatedComment);
+      console.log("Post ID:", posts);
+
+      setPosts((prevPosts) =>
+        prevPosts.map((p) => (p._id === postId ? updatedComment : p))
       );
 
-      setCommentTextMap({ ...commentTextMap, [postId]: "" });
+      setCommentTextMap((prev) => ({
+        ...prev,
+        [postId]: "",
+      }));
     } catch (err) {
       console.error("Failed to add comment:", err);
     }
@@ -784,35 +790,56 @@ export default function Dashboard() {
                     <input
                       value={commentTextMap[post._id] || ""}
                       onChange={(e) =>
-                        setCommentTextMap({
-                          ...commentTextMap,
+                        setCommentTextMap((prev) => ({
+                          ...prev,
                           [post._id]: e.target.value,
-                        })
+                        }))
                       }
                       placeholder="Add comment..."
                       className="px-2 py-1 rounded flex-1"
                       disabled={!commentInputOpen[post._id]}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+
+                          if (!commentInputOpen[post._id]) {
+                            setCommentInputOpen((prev) => ({
+                              ...prev,
+                              [post._id]: true,
+                            }));
+                            return;
+                          }
+
+                          handleComment(post._id);
+
+                          setCommentInputOpen((prev) => ({
+                            ...prev,
+                            [post._id]: false,
+                          }));
+                        }
+                      }}
                     />
 
                     <button
                       onClick={() => {
                         if (!commentInputOpen[post._id]) {
-                          setCommentInputOpen({
-                            ...commentInputOpen,
+                          setCommentInputOpen((prev) => ({
+                            ...prev,
                             [post._id]: true,
-                          });
+                          }));
                           return;
                         }
 
                         handleComment(post._id);
-                        setCommentInputOpen({
-                          ...commentInputOpen,
+
+                        setCommentInputOpen((prev) => ({
+                          ...prev,
                           [post._id]: false,
-                        });
+                        }));
                       }}
                       className="text-black cursor-pointer ml-2"
                     >
-                      💬Comment
+                      💬 Comment
                     </button>
 
                     <button
@@ -838,12 +865,16 @@ export default function Dashboard() {
                               <input
                                 type="text"
                                 value={commentEditMap[c._id] || ""}
-                                onChange={(e) =>
+                                onChange={(e) => {
+                                  console.log(
+                                    "Editing comment text:",
+                                    e.target.value
+                                  );
                                   setCommentEditMap({
                                     ...commentEditMap,
                                     [c._id]: e.target.value,
-                                  })
-                                }
+                                  });
+                                }}
                                 className="border px-1 py-0.5 rounded mr-2"
                               />
                               <button
