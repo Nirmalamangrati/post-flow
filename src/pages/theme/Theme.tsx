@@ -70,7 +70,7 @@ export default function Theme() {
     commentId: string;
   } | null>(null);
   const [editingCommentText, setEditingCommentText] = useState<string>("");
-
+  const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const frames = [
     {
       _id: "frame1",
@@ -130,6 +130,14 @@ export default function Theme() {
     },
   ];
 
+  const handleSelectFrame = (frameId: string) => {
+    setSelectedFrame(frameId);
+    localStorage.setItem("selectedFrame", frameId);
+
+    const frame = frames.find((f) => f._id === frameId);
+    if (frame) setFrameColor(frame.borderColor);
+  };
+
   const currentFrame = frames.find((f) => f._id === selectedFrame) || frames[0];
   const profileFrameObj =
     frames.find((f) => f._id === profileFrame) || frames[0];
@@ -138,7 +146,10 @@ export default function Theme() {
   useEffect(() => {
     fetch("http://localhost:8000/theme")
       .then((res) => res.json())
-      .then((data) => setPosts(data))
+      .then((data) => {
+        console.log("Fetched posts:", data); // DEBUG
+        setPosts(data);
+      })
       .catch((err) => console.error(err));
   }, []);
 
@@ -149,10 +160,17 @@ export default function Theme() {
 
   const handlePost = async () => {
     if (!postText && !postMedia) return;
+
     const formData = new FormData();
     formData.append("caption", postText);
     formData.append("frame", selectedFrame);
     formData.append("frameColor", frameColor);
+
+    console.log("Uploading - Frame:", selectedFrame);
+    console.log("Uploading - FrameColor:", frameColor);
+    console.log("FormData frame:", formData.get("frame"));
+    console.log("FormData frameColor:", formData.get("frameColor"));
+
     if (postMedia) formData.append("image", postMedia);
 
     try {
@@ -162,14 +180,19 @@ export default function Theme() {
         body: formData,
         headers: { Authorization: `Bearer ${token}` },
       });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
       const data = await res.json();
-      setPosts((prev) => [{ ...data.post, frame: selectedFrame }, ...prev]);
+      console.log("Backend response:", data); // DEBUG
+
+      setPosts((prev) => [data.post || data, ...prev]);
 
       setPostText("");
       setPostMedia(null);
       if (editorRef.current) editorRef.current.innerHTML = "";
     } catch (err) {
-      console.error(err);
+      console.error("Upload error:", err);
     }
   };
 
@@ -178,24 +201,40 @@ export default function Theme() {
       ? posts
       : posts.filter((p) => p.frame && p.frame === filterFrame);
 
-  const handleLike = async (postId: string) => {
+  // Like a post
+  async function handleLike(postId: string) {
     try {
       const token = localStorage.getItem("token");
 
-      const res = await fetch(`http://localhost:8000/posts/${postId}/like`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await fetch(
+        `http://localhost:8000/dashboard/${postId}/like`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-      const updatedPost = await res.json();
-      setPosts((prev) => prev.map((p) => (p._id === postId ? updatedPost : p)));
+      if (!res.ok) {
+        const err = await res.json();
+        return alert(err.error || "Failed to like/unlike post");
+      }
+      const updated = await res.json();
+      setPosts(
+        posts.map((p) =>
+          p._id === postId
+            ? { ...p, likes: updated.likes, likedByUser: updated.likedByUser }
+            : p
+        )
+      );
     } catch (err) {
-      console.error(err);
+      console.error("Like error:", err);
+      alert("Something went wrong while liking/unliking the post.");
     }
-  };
-
+  }
+  //comment box toggle
   const toggleCommentBox = (postId: string) => {
     setOpenCommentBoxPostId((prev) => (prev === postId ? null : postId));
     if (sharePostId) setSharePostId(null);
@@ -208,17 +247,28 @@ export default function Theme() {
   const submitComment = async (postId: string) => {
     const text = commentInputs[postId];
     if (!text) return;
+
     try {
+      const token = localStorage.getItem("token");
       const res = await fetch(
-        `http://localhost:8000/posts/${postId}/comments`,
+        `http://localhost:8000/profilehandler/${postId}/comment`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify({ text }),
         }
       );
-      const updatedPost = await res.json();
-      setPosts((prev) => prev.map((p) => (p._id === postId ? updatedPost : p)));
+      const data = await res.json();
+
+      setPosts(
+        posts.map((post) =>
+          post._id === postId ? { ...post, comments: data.comments } : post
+        )
+      );
+
       setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
     } catch (err) {
       console.error(err);
@@ -268,15 +318,28 @@ export default function Theme() {
       console.error(err);
     }
   };
-
+  // Delete a post
   const deletePost = async (postId: string) => {
+    if (!confirm("Are you sure you want to delete this post?")) return;
+
     try {
-      await fetch(`http://localhost:8000/posts/${postId}`, {
-        method: "DELETE",
-      });
-      setPosts((prev) => prev.filter((p) => p._id !== postId));
+      const res = await fetch(
+        `http://localhost:8000/profilehandler/${postId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (res.ok) {
+        setPosts(posts.filter((post) => post._id !== postId));
+      } else {
+        alert("Failed to delete post");
+      }
     } catch (err) {
-      console.error(err);
+      console.error("Delete failed", err);
     }
   };
 
@@ -287,6 +350,7 @@ export default function Theme() {
     return false;
   };
 
+  // Edit a comment
   const startEditingComment = (
     postId: string,
     commentId: string,
@@ -299,35 +363,80 @@ export default function Theme() {
     setEditingComment(null);
     setEditingCommentText("");
   };
-  const saveEditedComment = async (postId: string, commentId: string) => {
-    if (!editingCommentText.trim()) return;
+  const saveEditedComment = async (
+    postId: string,
+    commentId: string,
+    newText: string
+  ) => {
     try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please login to edit comments");
+        return;
+      }
+
       const res = await fetch(
-        `http://localhost:8000/posts/${postId}/comments/${commentId}`,
+        `http://localhost:8000/dashboard/comment/${postId}/${commentId}`,
         {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: editingCommentText }),
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ text: newText }),
         }
       );
-      const updatedPost = await res.json();
-      setPosts((prev) => prev.map((p) => (p._id === postId ? updatedPost : p)));
-      cancelEditingComment();
+
+      if (!res.ok) throw new Error("Failed to update comment");
+
+      const data = await res.json();
+
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post._id === postId ? { ...post, comments: data.comments } : post
+        )
+      );
+
+      setEditingComment(null);
     } catch (err) {
-      console.error(err);
+      console.error("Failed to update comment", err);
+      alert("Failed to update comment");
     }
   };
-
+  // Delete a comment
   const deleteComment = async (postId: string, commentId: string) => {
+    if (!confirm("Are you sure you want to delete this comment?")) return;
+
     try {
       const res = await fetch(
-        `http://localhost:8000/posts/${postId}/comments/${commentId}`,
-        { method: "DELETE" }
+        `http://localhost:8000/profilehandler/${postId}/comment/${commentId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
       );
-      const updatedPost = await res.json();
-      setPosts((prev) => prev.map((p) => (p._id === postId ? updatedPost : p)));
+
+      if (!res.ok) {
+        alert("Failed to delete comment");
+        return;
+      }
+
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post._id === postId
+            ? {
+                ...post,
+                comments: post.comments?.filter(
+                  (comment) => comment._id !== commentId
+                ),
+              }
+            : post
+        )
+      );
     } catch (err) {
-      console.error(err);
+      console.error("Failed to delete comment", err);
     }
   };
 
@@ -374,11 +483,10 @@ export default function Theme() {
           </div>
         </div>
 
-        {/* Stats */}
+        {/* Stats + Post Creator */}
         <div className="flex-1">
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4 mb-6">
             <StatCard label="Total Posts" value={posts.length} />
-
             <StatCard
               label="Engagement"
               value={`${(posts.length * 1).toFixed(1)}%`}
@@ -402,17 +510,23 @@ export default function Theme() {
             </select>
           </div>
 
-          {/* Post Creator */}
+          {/* Post Creator Frames */}
           <div className="grid grid-cols-4 gap-4 mb-6">
             {frames.map((frame) => (
               <div
                 key={frame._id}
-                className={`relative cursor-pointer rounded-lg border-4 p-4 text-center transition transform hover:scale-105 ${
+                className={`relative cursor-pointer rounded-lg p-4 text-center transition transform hover:scale-105 ${
                   selectedFrame === frame._id
                     ? "ring-4 ring-offset-2 ring-pink-500"
-                    : "border-transparent"
+                    : "border-4 border-transparent"
                 } ${frame.style} ${frame.extraClass}`}
-                onClick={() => setSelectedFrame(frame._id)}
+                onClick={() => handleSelectFrame(frame._id)}
+                style={{
+                  borderColor:
+                    selectedFrame === frame._id
+                      ? frame.borderColor
+                      : "transparent",
+                }}
               >
                 <p className="font-semibold">{frame.name}</p>
                 {frame.extraClass.includes("flower-frame") && (
@@ -462,7 +576,7 @@ export default function Theme() {
               </button>
             </div>
 
-            <div className="mt-4">
+            <div className="mt-4 item-center justify-center">
               <h3 className="font-bold mb-1">Saved Output:</h3>
             </div>
 
@@ -480,7 +594,7 @@ export default function Theme() {
                 overflowWrap: "break-word",
               }}
               suppressContentEditableWarning={true}
-            ></div>
+            />
 
             <div className="mt-4 mb-4">
               <input
@@ -511,7 +625,7 @@ export default function Theme() {
           {filteredPosts.map((post) => (
             <div
               key={post._id}
-              className={`p-4 rounded-lg  shadow-lg relative ${
+              className={`p-4 rounded-lg shadow-lg relative ${
                 frames.find((f) => f._id === post.frame)?.style || ""
               }`}
               style={{
@@ -520,6 +634,7 @@ export default function Theme() {
                   "#000",
               }}
             >
+              {/* Rest of post content same as before */}
               <div className="flex justify-between items-center mb-2">
                 {editingPostId === post._id ? (
                   <input
@@ -552,18 +667,39 @@ export default function Theme() {
                     </>
                   ) : (
                     <>
-                      <button
-                        onClick={() => startEditingPost(post)}
-                        className="text-blue-600 font-semibold"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => deletePost(post._id)}
-                        className="text-red-600 font-semibold"
-                      >
-                        Delete
-                      </button>
+                      <div className="relative">
+                        {" "}
+                        <button
+                          onClick={() =>
+                            setMenuOpen(menuOpen === post._id ? null : post._id)
+                          }
+                          className="p-2 text-gray-600 hover:bg-gray-200 rounded-full"
+                        >
+                          ...
+                        </button>
+                        {menuOpen === post._id && (
+                          <div className="absolute right-0 top-full mt-2 w-40 bg-white rounded-lg shadow-lg z-20">
+                            <button
+                              onClick={() => {
+                                startEditingPost(post);
+                                setMenuOpen(null);
+                              }}
+                              className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-gray-100"
+                            >
+                              ✏️ Edit
+                            </button>
+                            <button
+                              onClick={() => {
+                                deletePost(post._id);
+                                setMenuOpen(null);
+                              }}
+                              className="flex items-center gap-2 w-full px-3 py-2 text-left text-red-600 hover:bg-gray-100"
+                            >
+                              🗑️ Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </>
                   )}
                 </div>

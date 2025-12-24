@@ -85,7 +85,7 @@ export default function Profile() {
       const res = await fetch("http://localhost:8000/profilehandler", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`, 
+          Authorization: `Bearer ${token}`,
         },
         body: formData,
       });
@@ -242,7 +242,7 @@ export default function Profile() {
 
   const saveEdit = async (postId: string) => {
     try {
-      const token = localStorage.getItem("token"); 
+      const token = localStorage.getItem("token");
 
       const res = await fetch(
         `http://localhost:8000/profilehandler/${postId}`,
@@ -250,7 +250,7 @@ export default function Profile() {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`, // Auth header
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ caption: editingCaption }),
         }
@@ -306,7 +306,7 @@ export default function Profile() {
     }
   };
 
-  // Edit comment and updateeditcomment API call
+  // Edit comment and updateed
   const saveEditedComment = async (
     postId: string,
     commentId: string,
@@ -325,7 +325,7 @@ export default function Profile() {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`, // <--- Add this
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ text: newText }),
         }
@@ -358,7 +358,7 @@ export default function Profile() {
         {
           method: "DELETE",
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`, // Add this line
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         }
       );
