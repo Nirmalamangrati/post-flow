@@ -3,11 +3,10 @@ import ChatWindow from "../chats/Chats";
 type User = {
   _id: string;
   fullname: string;
-  profilePic?: string;
+  profileImage?: string;
 };
 
 type CommentType = {
-  user: any;
   _id: string;
   userId: User;
   text: string;
@@ -229,22 +228,39 @@ export default function Dashboard() {
         }
       );
 
-      if (!res.ok) throw new Error("Comment failed");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Comment failed");
+      }
 
-      const updatedComment = await res.json();
-      console.log("Updated Post after comment:", updatedComment);
-      console.log("Post ID:", posts);
+      const updatedPost = await res.json();
+
+      console.log(" New comment user data:", {
+        fullname:
+          updatedPost.comments[updatedPost.comments.length - 1]?.userId
+            ?.fullname,
+        profileImage:
+          updatedPost.comments[updatedPost.comments.length - 1]?.userId
+            ?.profileImage,
+        allComments: updatedPost.comments.slice(-2),
+      });
 
       setPosts((prevPosts) =>
-        prevPosts.map((p) => (p._id === postId ? updatedComment : p))
+        prevPosts.map((p) => (p._id === postId ? updatedPost : p))
       );
 
       setCommentTextMap((prev) => ({
         ...prev,
         [postId]: "",
       }));
-    } catch (err) {
+
+      setCommentInputOpen((prev) => ({
+        ...prev,
+        [postId]: false,
+      }));
+    } catch (err: any) {
       console.error("Failed to add comment:", err);
+      alert(err.message || "Failed to add comment");
     }
   }
 
@@ -854,12 +870,20 @@ export default function Dashboard() {
                     {post.comments?.map((c) => (
                       <li key={c._id} className="mb-1 flex items-center ml-80">
                         <img
-                          src={c.user?.profilePic || "/default-profile.png"}
-                          alt="Profile"
-                          className="w-8 h-8 rounded-full mr-2 mt-0.5"
+                          src={c.userId?.profileImage || "/default-profile.png"}
+                          alt={`${c.userId?.fullname || "User"}`}
+                          className="w-8 h-8 rounded-full mr-2 mt-0.5 object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                              "/default-profile.png";
+                          }}
                         />
                         <div className=" relative  justify-center items-center">
-                          <b>{c.user?.fullname || "Unknown User"}</b>: {c.text}
+                          <div className="font-medium text-sm truncate">
+                            {c.userId?.fullname || "Unknown User"}
+                          </div>
+                          <div className="text-xs text-gray-500">{c.text}</div>
+
                           {editingCommentId === c._id ? (
                             <>
                               <input
@@ -894,8 +918,8 @@ export default function Dashboard() {
                             </>
                           ) : (
                             <>
-                              {c.userId && c.userId.toString() === userId && (
-                                <div className="inline-block relative ml-2">
+                              {c.userId?._id === userId && (
+                                <div className="absolute justify-between ml-60 items-start left-50 top-[calc(100%-1.5rem)] flex flex-col z-80">
                                   {/* 3-dot button */}
                                   <button
                                     onClick={() =>
@@ -903,14 +927,14 @@ export default function Dashboard() {
                                         openMenuId === c._id ? null : c._id
                                       )
                                     }
-                                    className="text-gray-500 w-10"
+                                    className="mt-0 text-gray-600 px-10 py-1 "
                                   >
                                     ⋯
                                   </button>
 
-                                  {/* Edit/Delete menu */}
+                                  {/* Comment Edit/Delete menu */}
                                   {openMenuId === c._id && (
-                                    <div className="absolute top-0 left-8 bg-white rounded shadow-md flex flex-row z-10">
+                                    <div className="absolute top-1 right-16 bg-white rounded shadow-md flex flex-row z-10">
                                       <button
                                         onClick={() =>
                                           startEditingComment(c._id, c.text)
