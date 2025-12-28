@@ -663,16 +663,11 @@ export default function Theme() {
               <div className="flex justify-between items-start mb-2">
                 {editingPostId === post._id ? (
                   <>
-                    <input
-                      type="text"
-                      value={editingPostText}
-                      onChange={(e) => setEditingPostText(e.target.value)}
-                      className="w-full border rounded p-2 mr-2"
-                      onBlur={() => saveEditedPost(post._id)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") saveEditedPost(post._id);
-                        if (e.key === "Escape") cancelEditingPost();
-                      }}
+                    <textarea
+                      value={editingCaption}
+                      onChange={(e) => setEditingCaption(e.target.value)}
+                      rows={3}
+                      className="w-full p-2 border rounded mb-2"
                     />
                     <div className="flex gap-2">
                       <button
