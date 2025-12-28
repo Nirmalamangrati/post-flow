@@ -12,7 +12,17 @@ const StatCard = ({ label, value }: StatCardProps) => (
   </div>
 );
 
-type Comment = { _id: string; text: string };
+//  Comment type with user info
+type Comment = {
+  _id: string;
+  text: string;
+  userId: {
+    _id: string;
+    fullname: string;
+    profileImage?: string;
+  };
+};
+
 type Post = {
   _id: string;
   caption: string;
@@ -65,12 +75,16 @@ export default function Theme() {
   const [sharePostId, setSharePostId] = useState<string | null>(null);
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [editingPostText, setEditingPostText] = useState<string>("");
+  const [editingCaption, setEditingCaption] = useState<string>("");
   const [editingComment, setEditingComment] = useState<{
     postId: string;
     commentId: string;
+    text: string;
   } | null>(null);
-  const [editingCommentText, setEditingCommentText] = useState<string>("");
+
+  const [commentMenuOpen, setCommentMenuOpen] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
+
   const frames = [
     {
       _id: "frame1",
@@ -142,12 +156,11 @@ export default function Theme() {
   const profileFrameObj =
     frames.find((f) => f._id === profileFrame) || frames[0];
 
-  // Fetch posts from backend
   useEffect(() => {
     fetch("http://localhost:8000/theme")
       .then((res) => res.json())
       .then((data) => {
-        console.log("Fetched posts:", data); // DEBUG
+        console.log("Fetched posts:", data);
         setPosts(data);
       })
       .catch((err) => console.error(err));
@@ -184,7 +197,7 @@ export default function Theme() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const data = await res.json();
-      console.log("Backend response:", data); // DEBUG
+      console.log("Backend response:", data);
 
       setPosts((prev) => [data.post || data, ...prev]);
 
@@ -201,7 +214,6 @@ export default function Theme() {
       ? posts
       : posts.filter((p) => p.frame && p.frame === filterFrame);
 
-  // Like a post
   async function handleLike(postId: string) {
     try {
       const token = localStorage.getItem("token");
@@ -234,7 +246,7 @@ export default function Theme() {
       alert("Something went wrong while liking/unliking the post.");
     }
   }
-  //comment box toggle
+
   const toggleCommentBox = (postId: string) => {
     setOpenCommentBoxPostId((prev) => (prev === postId ? null : postId));
     if (sharePostId) setSharePostId(null);
@@ -251,7 +263,7 @@ export default function Theme() {
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(
-        `http://localhost:8000/profilehandler/${postId}/comment`,
+        `http://localhost:8000/dashboard/comment/${postId}`,
         {
           method: "POST",
           headers: {
@@ -263,12 +275,15 @@ export default function Theme() {
       );
       const data = await res.json();
 
-      setPosts(
+      setPosts((posts) =>
         posts.map((post) =>
-          post._id === postId ? { ...post, comments: data.comments } : post
+          post._id === postId
+            ? { ...post, comments: data.comments || data.updatedPost?.comments } // Flexible
+            : post
         )
       );
 
+      setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
       setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
     } catch (err) {
       console.error(err);
@@ -297,51 +312,50 @@ export default function Theme() {
 
   const startEditingPost = (post: Post) => {
     setEditingPostId(post._id);
-    setEditingPostText(post.caption);
+    setEditingCaption(post.caption);
   };
   const cancelEditingPost = () => {
     setEditingPostId(null);
-    setEditingPostText("");
+    setEditingCaption("");
   };
-  const saveEditedPost = async (postId: string) => {
-    if (!editingPostText.trim()) return;
-    try {
-      const res = await fetch(`http://localhost:8000/posts/${postId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: editingPostText }),
-      });
-      const updatedPost = await res.json();
-      setPosts((prev) => prev.map((p) => (p._id === postId ? updatedPost : p)));
-      cancelEditingPost();
-    } catch (err) {
-      console.error(err);
+  async function saveEditedPost(postId: string) {
+    const token = localStorage.getItem("token");
+    if (!editingCaption.trim()) {
+      return;
     }
-  };
-  // Delete a post
-  const deletePost = async (postId: string) => {
-    if (!confirm("Are you sure you want to delete this post?")) return;
 
-    try {
-      const res = await fetch(
-        `http://localhost:8000/profilehandler/${postId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+    const res = await fetch(`http://localhost:8000/dashboard/${postId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ caption: editingCaption }),
+    });
 
-      if (res.ok) {
-        setPosts(posts.filter((post) => post._id !== postId));
-      } else {
-        alert("Failed to delete post");
-      }
-    } catch (err) {
-      console.error("Delete failed", err);
+    if (res.ok) {
+      const updated = await res.json();
+      setPosts(posts.map((p) => (p._id === postId ? updated : p)));
+      setEditingPostId(null);
+      setEditingCaption("");
+    } else {
+      alert("Failed to update post");
     }
-  };
+  }
+
+  async function deletePost(postId: string) {
+    if (!window.confirm("Are you sure you want to delete this post?")) return;
+
+    const res = await fetch(`http://localhost:8000/dashboard/${postId}`, {
+      method: "DELETE",
+    });
+
+    if (res.ok) {
+      setPosts(posts.filter((p) => p._id !== postId));
+    } else {
+      alert("Failed to delete post");
+    }
+  }
 
   const isVideo = (post: Post) => {
     if (post.mediaType) return post.mediaType.startsWith("video/");
@@ -350,19 +364,18 @@ export default function Theme() {
     return false;
   };
 
-  // Edit a comment
   const startEditingComment = (
     postId: string,
     commentId: string,
     text: string
   ) => {
-    setEditingComment({ postId, commentId });
-    setEditingCommentText(text);
+    setEditingComment({ postId, commentId, text });
   };
+
   const cancelEditingComment = () => {
     setEditingComment(null);
-    setEditingCommentText("");
   };
+
   const saveEditedComment = async (
     postId: string,
     commentId: string,
@@ -403,13 +416,13 @@ export default function Theme() {
       alert("Failed to update comment");
     }
   };
-  // Delete a comment
+
   const deleteComment = async (postId: string, commentId: string) => {
     if (!confirm("Are you sure you want to delete this comment?")) return;
 
     try {
       const res = await fetch(
-        `http://localhost:8000/profilehandler/${postId}/comment/${commentId}`,
+        `http://localhost:8000/dashboard/comment/${postId}/${commentId}`,
         {
           method: "DELETE",
           headers: {
@@ -440,8 +453,21 @@ export default function Theme() {
     }
   };
 
+  const toggleCommentMenu = (commentId: string) => {
+    setCommentMenuOpen((prev) => (prev === commentId ? null : commentId));
+  };
+
   const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setFilterFrame(e.target.value);
+  };
+  const getProfilePicUrl = (profilePic?: string) => {
+    if (profilePic && profilePic.startsWith("/")) {
+      return `http://localhost:8000${profilePic}`;
+    }
+    if (profilePic) {
+      return profilePic;
+    }
+    return "https://via.placeholder.com/40x40/6b7280/ffffff?text=👤";
   };
 
   return (
@@ -625,7 +651,7 @@ export default function Theme() {
           {filteredPosts.map((post) => (
             <div
               key={post._id}
-              className={`p-4 rounded-lg shadow-lg relative ${
+              className={`p-4 rounded-lg shadow-lg relative border-4 ${
                 frames.find((f) => f._id === post.frame)?.style || ""
               }`}
               style={{
@@ -634,79 +660,79 @@ export default function Theme() {
                   "#000",
               }}
             >
-              {/* Rest of post content same as before */}
-              <div className="flex justify-between items-center mb-2">
+              <div className="flex justify-between items-start mb-2">
                 {editingPostId === post._id ? (
-                  <input
-                    type="text"
-                    value={editingPostText}
-                    onChange={(e) => setEditingPostText(e.target.value)}
-                    className="w-full border rounded p-2"
-                  />
-                ) : (
-                  <div
-                    dangerouslySetInnerHTML={{ __html: post.caption }}
-                    className="mb-2"
-                  />
-                )}
-                <div className="flex gap-2 ml-2">
-                  {editingPostId === post._id ? (
-                    <>
+                  <>
+                    <input
+                      type="text"
+                      value={editingPostText}
+                      onChange={(e) => setEditingPostText(e.target.value)}
+                      className="w-full border rounded p-2 mr-2"
+                      onBlur={() => saveEditedPost(post._id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveEditedPost(post._id);
+                        if (e.key === "Escape") cancelEditingPost();
+                      }}
+                    />
+                    <div className="flex gap-2">
                       <button
                         onClick={() => saveEditedPost(post._id)}
-                        className="text-green-600 font-semibold"
+                        className="text-green-600 font-semibold px-2 py-1"
                       >
                         Save
                       </button>
                       <button
                         onClick={cancelEditingPost}
-                        className="text-red-600 font-semibold"
+                        className="text-red-600 font-semibold px-2 py-1"
                       >
                         Cancel
                       </button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="relative">
-                        {" "}
-                        <button
-                          onClick={() =>
-                            setMenuOpen(menuOpen === post._id ? null : post._id)
-                          }
-                          className="p-2 text-gray-600 hover:bg-gray-200 rounded-full"
-                        >
-                          ...
-                        </button>
-                        {menuOpen === post._id && (
-                          <div className="absolute right-0 top-full mt-2 w-40 bg-white rounded-lg shadow-lg z-20">
-                            <button
-                              onClick={() => {
-                                startEditingPost(post);
-                                setMenuOpen(null);
-                              }}
-                              className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-gray-100"
-                            >
-                              ✏️ Edit
-                            </button>
-                            <button
-                              onClick={() => {
-                                deletePost(post._id);
-                                setMenuOpen(null);
-                              }}
-                              className="flex items-center gap-2 w-full px-3 py-2 text-left text-red-600 hover:bg-gray-100"
-                            >
-                              🗑️ Delete
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div
+                      className="flex-1 pr-4"
+                      dangerouslySetInnerHTML={{ __html: post.caption }}
+                    />
+                    <div className="relative flex-shrink-0">
+                      <button
+                        onClick={() =>
+                          setMenuOpen(menuOpen === post._id ? null : post._id)
+                        }
+                        className="p-2 text-gray-600 hover:bg-gray-200 rounded-full"
+                      >
+                        ...
+                      </button>
+                      {menuOpen === post._id && (
+                        <div className="absolute right-0 top-full mt-2 w-40 bg-white rounded-lg shadow-lg z-50 border py-1">
+                          <button
+                            className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-gray-100 text-sm"
+                            onClick={() => {
+                              startEditingPost(post);
+                              setMenuOpen(null);
+                            }}
+                          >
+                            ✏️ Edit
+                          </button>
+                          <button
+                            className="flex items-center gap-2 w-full px-3 py-2 text-left text-red-600 hover:bg-gray-100 text-sm"
+                            onClick={() => {
+                              deletePost(post._id);
+                              setMenuOpen(null);
+                            }}
+                          >
+                            🗑️ Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
 
               {post.imageUrl && (
-                <div className="mb-2">
+                <div className="mb-4">
                   {isVideo(post) ? (
                     <video
                       src={post.imageUrl}
@@ -723,114 +749,187 @@ export default function Theme() {
                 </div>
               )}
 
-              <div className="flex items-center gap-4 mb-2">
+              <div className="flex items-center gap-4 mb-4">
                 <button
                   onClick={() => handleLike(post._id)}
-                  className={`px-2 py-1 rounded ${
-                    post.likedByUser ? "bg-red-400 text-white" : "bg-gray-200"
+                  className={`px-3 py-2 rounded font-medium transition ${
+                    post.likedByUser
+                      ? "bg-red-500 text-white shadow-md"
+                      : "bg-gray-200 hover:bg-gray-300"
                   }`}
                 >
                   ❤️ {formatNumber(post.likes)}
                 </button>
                 <button
                   onClick={() => toggleCommentBox(post._id)}
-                  className="px-2 py-1 rounded bg-gray-200"
+                  className="px-3 py-2 rounded font-medium bg-gray-200 hover:bg-gray-300 transition"
                 >
                   💬 {post.comments?.length || 0}
                 </button>
                 <button
                   onClick={() => toggleShareMenu(post._id)}
-                  className="px-2 py-1 rounded bg-gray-200"
+                  className="px-3 py-2 rounded font-medium bg-gray-200 hover:bg-gray-300 transition"
                 >
                   🔗 Share
                 </button>
               </div>
 
-              {/* Comment Box */}
+              {/*  NEW COMMENT SECTION WITH USER INFO */}
               {openCommentBoxPostId === post._id && (
-                <div className="mb-2">
-                  {post.comments.map((comment) => (
-                    <div
-                      key={comment._id}
-                      className="flex justify-between items-center mb-1 bg-gray-100 p-1 rounded"
-                    >
-                      {editingComment?.postId === post._id &&
-                      editingComment.commentId === comment._id ? (
-                        <>
-                          <input
-                            type="text"
-                            value={editingCommentText}
-                            onChange={(e) =>
-                              setEditingCommentText(e.target.value)
-                            }
-                            className="border rounded px-2 py-1 flex-1 mr-2"
-                          />
-                          <button
-                            onClick={() =>
-                              saveEditedComment(post._id, comment._id)
-                            }
-                            className="text-green-600 font-semibold mr-1"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={cancelEditingComment}
-                            className="text-red-600 font-semibold"
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <span>{comment.text}</span>
-                          <div className="flex gap-1">
-                            <button
-                              onClick={() =>
-                                startEditingComment(
-                                  post._id,
-                                  comment._id,
-                                  comment.text
+                <div className="space-y-3 mb-4">
+                  {(post.comments || []).map((comment) => {
+                    const isEditing =
+                      editingComment &&
+                      editingComment.postId === post._id &&
+                      editingComment.commentId === comment._id;
+
+                    return (
+                      <div
+                        key={comment._id}
+                        className="bg-white border border-gray-200 p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-200"
+                      >
+                        {isEditing ? (
+                          <>
+                            <input
+                              type="text"
+                              value={editingComment.text}
+                              onChange={(e) =>
+                                setEditingComment((prev) =>
+                                  prev
+                                    ? { ...prev, text: e.target.value }
+                                    : null
                                 )
                               }
-                              className="text-blue-600 font-semibold text-sm"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() =>
-                                deleteComment(post._id, comment._id)
-                              }
-                              className="text-red-600 font-semibold text-sm"
-                            >
-                              Del
-                            </button>
+                              className="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  if (editingComment) {
+                                    saveEditedComment(
+                                      editingComment.postId,
+                                      editingComment.commentId,
+                                      editingComment.text
+                                    );
+                                  }
+                                } else if (e.key === "Escape") {
+                                  cancelEditingComment();
+                                }
+                              }}
+                              autoFocus
+                            />
+                            <div className="flex gap-2 justify-end">
+                              <button
+                                className="px-4 py-2 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition"
+                                onClick={() =>
+                                  editingComment &&
+                                  saveEditedComment(
+                                    editingComment.postId,
+                                    editingComment.commentId,
+                                    editingComment.text
+                                  )
+                                }
+                              >
+                                Save
+                              </button>
+                              <button
+                                className="px-4 py-2 bg-gray-500 text-white text-sm rounded-lg hover:bg-gray-600 transition"
+                                onClick={cancelEditingComment}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex items-start space-x-3">
+                            {/*  USER PROFILE PIC */}
+                            <div className="flex-shrink-0 w-10 h-10">
+                              <img
+                                src={getProfilePicUrl(
+                                  comment.userId?.profileImage
+                                )}
+                                alt={comment.userId?.fullname || "User"}
+                                className="w-10 h-10 rounded-full object-cover ring-2 ring-gray-200 shadow-md"
+                                onError={(e) => {
+                                  e.currentTarget.src =
+                                    "https://via.placeholder.com/40x40/6b7280/ffffff?text=👤";
+                                }}
+                              />
+                            </div>
+
+                            {/*  USER INFO + COMMENT TEXT */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center space-x-2 mb-1">
+                                <span className="font-semibold text-sm text-gray-900 truncate max-w-[200px]">
+                                  {comment.userId?.fullname || "Anonymous User"}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-800 leading-relaxed break-words">
+                                {comment.text}
+                              </p>
+                            </div>
+
+                            {/* COMMENT MENU */}
+                            <div className="relative flex-shrink-0 ml-2">
+                              <button
+                                onClick={() => toggleCommentMenu(comment._id)}
+                                className="p-2 text-gray-500 hover:bg-gray-100 rounded-full hover:text-gray-700 transition-all duration-200 text-sm"
+                                title="More options"
+                              >
+                                ...
+                              </button>
+
+                              {commentMenuOpen === comment._id && (
+                                <div className="absolute top-10 right-0 bg-white border border-gray-200 rounded-lg shadow-xl z-50 w-28 py-1">
+                                  <button
+                                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-t-lg"
+                                    onClick={() => {
+                                      startEditingComment(
+                                        post._id,
+                                        comment._id,
+                                        comment.text
+                                      );
+                                      setCommentMenuOpen(null);
+                                    }}
+                                  >
+                                    ✏️ Edit
+                                  </button>
+                                  <button
+                                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-b-lg"
+                                    onClick={() => {
+                                      deleteComment(post._id, comment._id);
+                                      setCommentMenuOpen(null);
+                                    }}
+                                  >
+                                    🗑️ Delete
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </>
-                      )}
-                    </div>
-                  ))}
-                  <input
-                    type="text"
-                    placeholder="Add a comment"
-                    value={commentInputs[post._id] || ""}
-                    onChange={(e) =>
-                      handleCommentChange(post._id, e.target.value)
-                    }
-                    onKeyDown={(e) => handleCommentKeyPress(e, post._id)}
-                    className="border rounded w-full px-2 py-1 mt-1"
-                  />
-                  <button
-                    onClick={() => submitComment(post._id)}
-                    className="mt-1 px-4 py-1 bg-pink-500 text-white rounded hover:bg-pink-600"
-                  >
-                    Add Comment
-                  </button>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* NEW COMMENT INPUT */}
+                  <div className="pt-4 border-t pt-4">
+                    <input
+                      type="text"
+                      placeholder="Add a comment..."
+                      value={commentInputs[post._id] || ""}
+                      onChange={(e) =>
+                        handleCommentChange(post._id, e.target.value)
+                      }
+                      onKeyDown={(e) => handleCommentKeyPress(e, post._id)}
+                      className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent shadow-sm"
+                    />
+                  </div>
                 </div>
               )}
 
               {/* Share Menu */}
               {sharePostId === post._id && (
-                <div className="flex flex-col gap-1 mt-2">
+                <div className="flex flex-col gap-2 p-3 bg-white border rounded-lg shadow-lg absolute top-16 right-4 z-40">
                   <button
                     onClick={() =>
                       openShareWindow(
@@ -839,9 +938,9 @@ export default function Theme() {
                         )}`
                       )
                     }
-                    className="bg-blue-600 text-white rounded px-2 py-1"
+                    className="bg-blue-600 text-white rounded px-3 py-2 hover:bg-blue-700 transition"
                   >
-                    Share to Facebook
+                    Facebook
                   </button>
                   <button
                     onClick={() =>
@@ -851,9 +950,9 @@ export default function Theme() {
                         )}`
                       )
                     }
-                    className="bg-blue-400 text-white rounded px-2 py-1"
+                    className="bg-blue-400 text-white rounded px-3 py-2 hover:bg-blue-500 transition"
                   >
-                    Share to Twitter
+                    Twitter
                   </button>
                   <button
                     onClick={() =>
@@ -863,9 +962,9 @@ export default function Theme() {
                         )}`
                       )
                     }
-                    className="bg-blue-800 text-white rounded px-2 py-1"
+                    className="bg-blue-800 text-white rounded px-3 py-2 hover:bg-blue-900 transition"
                   >
-                    Share to LinkedIn
+                    LinkedIn
                   </button>
                 </div>
               )}

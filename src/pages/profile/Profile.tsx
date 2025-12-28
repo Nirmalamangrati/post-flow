@@ -45,6 +45,7 @@ export default function Profile() {
   );
 
   const [sharePostId, setSharePostId] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   // Editing states for posts
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
@@ -68,7 +69,7 @@ export default function Profile() {
       setImagePreview(URL.createObjectURL(file));
     }
   };
-  //profile image upload
+
   const handleUpload = async () => {
     if (!imageFile || !userId) {
       alert("Please select an image!");
@@ -104,17 +105,15 @@ export default function Profile() {
         return;
       }
 
-      // Add new post to state safely
       setPosts((prev) => [...prev, data]);
-      setImageFile(null); // reset input
-      setCaption(""); // reset caption
+      setImageFile(null);
+      setCaption("");
     } catch (err) {
       console.error("Upload error:", err);
       alert("Something went wrong during upload.");
     }
   };
 
-  // New fetchMyPost function with token authorization
   const fetchMyPost = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -234,7 +233,6 @@ export default function Profile() {
     setSharePostId((prev) => (prev === postId ? null : postId));
   };
 
-  // Edit post caption
   const startEditing = (postId: string, currentCaption: string) => {
     setEditingPostId(postId);
     setEditingCaption(currentCaption);
@@ -281,7 +279,6 @@ export default function Profile() {
     setEditingCaption("");
   };
 
-  // Delete post
   const deletePost = async (postId: string) => {
     if (!confirm("Are you sure you want to delete this post?")) return;
 
@@ -306,7 +303,6 @@ export default function Profile() {
     }
   };
 
-  // Edit comment and updateed
   const saveEditedComment = async (
     postId: string,
     commentId: string,
@@ -348,7 +344,6 @@ export default function Profile() {
     }
   };
 
-  // Delete comment  API call
   const deleteComment = async (postId: string, commentId: string) => {
     if (!confirm("Are you sure you want to delete this comment?")) return;
 
@@ -385,7 +380,6 @@ export default function Profile() {
     }
   };
 
-  // Start editing a comment
   const startEditComment = (
     postId: string,
     commentId: string,
@@ -394,9 +388,11 @@ export default function Profile() {
     setEditingComment({ postId, commentId, text });
   };
 
-  // Cancel editing comment
   const cancelEditComment = () => {
     setEditingComment(null);
+  };
+  const toggleCommentMenu = (commentId: string) => {
+    setOpenMenuId((prev) => (prev === commentId ? null : commentId));
   };
 
   useEffect(() => {
@@ -414,12 +410,7 @@ export default function Profile() {
   }, [posts]);
 
   return (
-    <div
-      className="min-h-screen flex flex-col items-center py-10 space-y-6 
-                relative w-full max-w-3xl mx-auto
-                  bg-gradient-to-br from-white to-gray-100 rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.12)]
-                overflow-y-auto p-8"
-    >
+    <div className="min-h-screen flex flex-col items-center py-10 space-y-6 relative w-full max-w-3xl mx-auto bg-gradient-to-br from-white to-gray-100 rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] overflow-y-auto p-8">
       <h1 className="text-4xl font-bold mb-6">Welcome, {fullname}!</h1>
 
       {/* Upload Section */}
@@ -474,13 +465,13 @@ export default function Profile() {
           .filter((post) => post && post.imageUrl)
           .map((post, index) => (
             <div
-              key={index}
-              className="bg-white shadow rounded-lg p-4 space-y-2  relative"
+              key={post._id || index}
+              className="bg-white shadow rounded-lg p-4 space-y-2 relative"
             >
               <div className="flex items-center space-x-3">
                 <img
                   src={post.imageUrl}
-                  className="w-10 h-10 rounded-full  object-cover"
+                  className="w-10 h-10 rounded-full object-cover"
                   alt={post.caption || "Post image"}
                 />
                 <div>
@@ -492,7 +483,6 @@ export default function Profile() {
               </div>
 
               <div className="mt-2 relative">
-                {/* Editable caption */}
                 {editingPostId === post._id ? (
                   <input
                     type="text"
@@ -525,7 +515,7 @@ export default function Profile() {
                   <img
                     src={post.imageUrl || post.mediaUrl}
                     alt="Post"
-                    className="w-full rounded-lg object-cover "
+                    className="w-full rounded-lg object-cover"
                   />
                 ) : (
                   <div className="w-full h-48 bg-gray-200 flex items-center justify-center text-gray-400">
@@ -533,10 +523,9 @@ export default function Profile() {
                   </div>
                 )}
 
-                {/* Delete icon */}
                 <span
                   onClick={() => post._id && deletePost(post._id)}
-                  className="absolute top-2 right-2 cursor-pointer text-red-600 text-xl select-none"
+                  className="absolute top-2 right-2 cursor-pointer text-red-600 text-xl select-none z-10"
                   title="Delete post"
                   role="button"
                   tabIndex={0}
@@ -551,7 +540,6 @@ export default function Profile() {
                 </span>
               </div>
 
-              {/* Like, Comment, Share */}
               <div className="flex space-x-6 mt-3">
                 <button
                   onClick={() => post._id && handleLike(post._id)}
@@ -575,10 +563,9 @@ export default function Profile() {
                 </button>
               </div>
 
-              {/* Share menu */}
               {sharePostId === post._id && (
-                <div className="absolute bg-white border rounded shadow p-2 mt-2 space-x-3 z-50 right-4">
-                  <span
+                <div className="absolute top-12 right-4 bg-white border rounded-lg shadow-lg p-3 z-50 w-32 flex flex-col gap-2">
+                  <button
                     onClick={() =>
                       post._id &&
                       openShareWindow(
@@ -587,11 +574,11 @@ export default function Profile() {
                         )}`
                       )
                     }
-                    className="text-blue-600 font-bold cursor-pointer select-none"
+                    className="text-blue-600 font-bold hover:bg-blue-50 p-2 rounded text-left"
                   >
-                    Facebook
-                  </span>
-                  <span
+                    📘 Facebook
+                  </button>
+                  <button
                     onClick={() =>
                       post._id &&
                       openShareWindow(
@@ -600,11 +587,11 @@ export default function Profile() {
                         )}&text=${encodeURIComponent(post.caption)}`
                       )
                     }
-                    className="text-blue-400 font-bold cursor-pointer select-none"
+                    className="text-blue-400 font-bold hover:bg-blue-50 p-2 rounded text-left"
                   >
-                    Twitter
-                  </span>
-                  <span
+                    🐦 Twitter
+                  </button>
+                  <button
                     onClick={() =>
                       post._id &&
                       openShareWindow(
@@ -613,11 +600,11 @@ export default function Profile() {
                         )}`
                       )
                     }
-                    className="text-green-600 font-bold cursor-pointer select-none"
+                    className="text-green-600 font-bold hover:bg-green-50 p-2 rounded text-left"
                   >
-                    WhatsApp
-                  </span>
-                  <span
+                    💬 WhatsApp
+                  </button>
+                  <button
                     onClick={() =>
                       post._id &&
                       openShareWindow(
@@ -626,17 +613,17 @@ export default function Profile() {
                         )}&title=${encodeURIComponent(post.caption)}`
                       )
                     }
-                    className="text-blue-700 font-bold cursor-pointer select-none"
+                    className="text-blue-700 font-bold hover:bg-blue-50 p-2 rounded text-left"
                   >
-                    LinkedIn
-                  </span>
+                    💼 LinkedIn
+                  </button>
                 </div>
               )}
 
-              {/* Comment box */}
+              {/* Comment section */}
               {openCommentBoxPostId === post._id && (
                 <>
-                  <div className="mt-2">
+                  <div className="mt-4">
                     <input
                       id={`comment-input-${post._id}`}
                       type="text"
@@ -663,13 +650,13 @@ export default function Profile() {
                       return (
                         <div
                           key={comment._id}
-                          className="bg-gray-100 p-2 rounded space-y-1  w-[calc(100%-280px)]"
+                          className="bg-gray-50 p-3 rounded-lg space-y-2 border"
                         >
                           {isEditing ? (
                             <>
                               <input
                                 type="text"
-                                className="w-full px-2 py-1 border rounded"
+                                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 value={editingComment.text}
                                 onChange={(e) =>
                                   setEditingComment((prev) =>
@@ -693,9 +680,9 @@ export default function Profile() {
                                 }}
                                 autoFocus
                               />
-                              <div className="flex space-x-2 mt-1">
+                              <div className="flex gap-2">
                                 <button
-                                  className="text-green-600 font-semibold"
+                                  className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600"
                                   onClick={() =>
                                     editingComment &&
                                     saveEditedComment(
@@ -708,7 +695,7 @@ export default function Profile() {
                                   Save
                                 </button>
                                 <button
-                                  className="text-red-600 font-semibold"
+                                  className="px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600"
                                   onClick={cancelEditComment}
                                 >
                                   Cancel
@@ -717,35 +704,66 @@ export default function Profile() {
                             </>
                           ) : (
                             <>
-                              <p className="text-sm">{comment.text}</p>
-                              <p className="text-xs text-gray-400">
-                                {new Date(comment.createdAt).toLocaleString()}
-                              </p>
-                              <div className="flex space-x-3 mt-1">
-                                <button
-                                  className="text-blue-600 text-xs underline"
-                                  onClick={() =>
-                                    post._id &&
-                                    comment._id &&
-                                    startEditComment(
-                                      post._id,
-                                      comment._id,
-                                      comment.text
-                                    )
-                                  }
-                                >
-                                  ✏️
-                                </button>
-                                <button
-                                  className="text-red-600 text-xs underline"
-                                  onClick={() =>
-                                    post._id &&
-                                    comment._id &&
-                                    deleteComment(post._id, comment._id)
-                                  }
-                                >
-                                  🗑️
-                                </button>
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <p className="text-sm text-gray-800 leading-relaxed">
+                                    {comment.text}
+                                  </p>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    {new Date(
+                                      comment.createdAt
+                                    ).toLocaleString()}
+                                  </p>
+                                </div>
+
+                                <div className="relative ml-2 flex-shrink-0">
+                                  <button
+                                    onClick={() =>
+                                      comment._id &&
+                                      toggleCommentMenu(comment._id)
+                                    }
+                                    className="p-1.5 text-gray-500 hover:bg-gray-200 rounded-full hover:text-gray-700 transition-colors"
+                                    title="More options"
+                                  >
+                                    ...
+                                  </button>
+
+                                  {openMenuId === comment._id && (
+                                    <div className="absolute top-0 right-0 mt-8 bg-white border border-gray-200 rounded-lg shadow-xl w-32 z-50 py-1">
+                                      <button
+                                        className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-t-lg"
+                                        onClick={() => {
+                                          if (post._id && comment._id) {
+                                            startEditComment(
+                                              post._id,
+                                              comment._id,
+                                              comment.text
+                                            );
+                                            setOpenMenuId(null);
+                                          }
+                                        }}
+                                      >
+                                        <span className="mr-2">✏️</span>
+                                        Edit
+                                      </button>
+                                      <button
+                                        className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-b-lg"
+                                        onClick={() => {
+                                          if (post._id && comment._id) {
+                                            deleteComment(
+                                              post._id,
+                                              comment._id
+                                            );
+                                            setOpenMenuId(null);
+                                          }
+                                        }}
+                                      >
+                                        <span className="mr-2">🗑️</span>
+                                        Delete
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </>
                           )}

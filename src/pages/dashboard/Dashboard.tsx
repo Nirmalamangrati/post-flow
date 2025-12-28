@@ -282,11 +282,9 @@ export default function Dashboard() {
       );
 
       if (res.ok) {
-        const updated = await res.json();
-        setPosts(
-          posts.map((p) =>
-            p._id === postId ? { ...p, comments: updated.comments } : p
-          )
+        const updatedPost = await res.json();
+        setPosts((prev) =>
+          prev.map((p) => (p._id === updatedPost._id ? updatedPost : p))
         );
         if (editingCommentId === commentId) setEditingCommentId(null);
       } else {
@@ -328,12 +326,12 @@ export default function Dashboard() {
       );
 
       if (res.ok) {
-        const updated = await res.json();
-        setPosts(
-          posts.map((p) =>
-            p._id === postId ? { ...p, comments: updated.comments } : p
-          )
+        const updatedPost = await res.json();
+
+        setPosts((prev) =>
+          prev.map((p) => (p._id === updatedPost._id ? updatedPost : p))
         );
+
         setEditingCommentId(null);
       } else {
         const errorData = await res.json();
