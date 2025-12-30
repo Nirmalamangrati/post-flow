@@ -9,10 +9,12 @@ interface Friend {
 }
 
 interface Message {
-  _id?: string;
+  _id: string;
   text: string;
   from: "me" | "them";
   time: string;
+  isEdited?: boolean;
+  editedAt?: string;
 }
 
 const API_BASE = "http://localhost:8000/api";
@@ -25,6 +27,10 @@ const ChatPopupContainer: React.FC = () => {
     {}
   );
   const [inputMap, setInputMap] = useState<{ [key: string]: string }>({});
+  const [editModeMap, setEditModeMap] = useState<{
+    [key: string]: { editing: boolean; tempText: string };
+  }>({});
+  const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoadingMessages, setIsLoadingMessages] = useState<{
     [key: string]: boolean;
@@ -56,16 +62,237 @@ const ChatPopupContainer: React.FC = () => {
           JSON.stringify(updatedMap)
         );
       } catch (err) {
-        console.error("Error saving messages to storage:", err);
+        console.error("Error saving messages from storage:", err);
       }
     },
     [loggedInUserId]
   );
 
-  //Receive message handler
+  // Toggle menu
+  const toggleMenu = (messageId: string) => {
+    setMenuOpen(menuOpen === messageId ? null : messageId);
+  };
+
+  // Close menu on outside click
+  useEffect(() => {
+    const handleClickOutside = () => setMenuOpen(null);
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
+
+  // ✅ FIXED: Delete message - Check valid ID first
+  const handleDeleteMessage = async (friendId: string, messageId: string) => {
+    // Block temp/numeric IDs
+    if (messageId.startsWith("temp_") || /^\d+$/.test(messageId)) {
+      console.log("❌ Cannot delete temp message:", messageId);
+      setMenuOpen(null);
+      return;
+    }
+
+    try {
+      const token = getToken();
+      if (!token) return;
+
+      const res = await fetch(`${API_BASE}/messages/${messageId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) throw new Error("Failed to delete message");
+
+      setMessagesMap((prev) => {
+        const updated = {
+          ...prev,
+          [friendId]:
+            prev[friendId]?.filter((msg) => msg._id !== messageId) || [],
+        };
+        saveMessagesToStorage(updated);
+        return updated;
+      });
+    } catch (err) {
+      console.error("Delete error:", err);
+    }
+    setMenuOpen(null);
+  };
+
+  // ✅ FIXED: Edit message - Check valid ID first
+  const handleEditMessage = async (
+    friendId: string,
+    messageId: string,
+    newText: string
+  ) => {
+    // Block temp/numeric IDs
+    if (messageId.startsWith("temp_") || /^\d+$/.test(messageId)) {
+      console.log("❌ Cannot edit temp message:", messageId);
+      setMenuOpen(null);
+      return;
+    }
+
+    try {
+      const token = getToken();
+      if (!token) return;
+
+      const res = await fetch(`${API_BASE}/messages/${messageId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ text: newText }),
+      });
+
+      if (!res.ok) throw new Error("Failed to edit message");
+
+      const updatedMsg = await res.json();
+
+      setMessagesMap((prev) => {
+        const updated = {
+          ...prev,
+          [friendId]:
+            prev[friendId]?.map((msg) =>
+              msg._id === messageId
+                ? {
+                    ...msg,
+                    text: updatedMsg.text,
+                    isEdited: true,
+                    editedAt: new Date().toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    }),
+                  }
+                : msg
+            ) || [],
+        };
+        saveMessagesToStorage(updated);
+        return updated;
+      });
+
+      setEditModeMap((prev) => ({
+        ...prev,
+        [messageId]: { editing: false, tempText: "" },
+      }));
+    } catch (err) {
+      console.error("Edit error:", err);
+    }
+    setMenuOpen(null);
+  };
+
+  // Toggle edit mode
+  const toggleEditMode = (
+    friendId: string,
+    messageId: string,
+    currentText: string
+  ) => {
+    // Block temp IDs from edit mode
+    if (messageId.startsWith("temp_") || /^\d+$/.test(messageId)) {
+      console.log("❌ Cannot edit temp message");
+      return;
+    }
+
+    setEditModeMap((prev) => ({
+      ...prev,
+      [messageId]: { editing: true, tempText: currentText },
+    }));
+    setMenuOpen(null);
+  };
+
+  // ✅ FIXED: handleSend with SERVER API CALL
+  const handleSend = async (friendId: string) => {
+    const text = inputMap[friendId]?.trim();
+    if (!text) return;
+
+    const tempId = `temp_${Date.now()}`;
+
+    // 1. Optimistic UI - show temp message
+    const tempMsg: Message = {
+      _id: tempId,
+      text,
+      from: "me",
+      time: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+
+    setMessagesMap((prev) => {
+      const updated = {
+        ...prev,
+        [friendId]: [...(prev[friendId] || []), tempMsg],
+      };
+      saveMessagesToStorage(updated);
+      return updated;
+    });
+
+    setInputMap((prev) => ({ ...prev, [friendId]: "" }));
+
+    try {
+      // 2. Send to SERVER API
+      const token = getToken();
+      const res = await fetch(`${API_BASE}/messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ to: friendId, text }),
+      });
+
+      if (!res.ok) throw new Error("Server error");
+
+      const serverMsg = await res.json();
+      console.log("✅ SERVER ID:", serverMsg._id);
+
+      // 3. Replace temp ID with real server ID
+      setMessagesMap((prev) => {
+        const updated = { ...prev };
+        if (updated[friendId]) {
+          updated[friendId] = updated[friendId].map((msg) =>
+            msg._id === tempId
+              ? {
+                  _id: serverMsg._id,
+                  text: serverMsg.text,
+                  from: "me",
+                  time: new Date(serverMsg.createdAt).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }),
+                }
+              : msg
+          );
+        }
+        saveMessagesToStorage(updated);
+        return updated;
+      });
+
+      // 4. Socket emit for real-time
+      socket.emit("message", { to: friendId, from: loggedInUserId, text });
+    } catch (error) {
+      console.error("❌ Send failed:", error);
+      // Rollback temp message on error
+      setMessagesMap((prev) => {
+        const updated = { ...prev };
+        if (updated[friendId]) {
+          updated[friendId] = updated[friendId].filter(
+            (msg) => msg._id !== tempId
+          );
+        }
+        saveMessagesToStorage(updated);
+        return updated;
+      });
+    }
+
+    setTimeout(() => {
+      messagesEndRefs.current[friendId]?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
+
+  // Receive message handler
   const handleReceiveMessage = useCallback(
     (msg: any) => {
-      console.log("🎉 RECEIVED raw message:", msg);
+      console.log("🎉 RECEIVED:", msg);
       const friendId = msg.from === loggedInUserId ? msg.to : msg.from;
 
       const newMsg: Message = {
@@ -76,9 +303,8 @@ const ChatPopupContainer: React.FC = () => {
           hour: "2-digit",
           minute: "2-digit",
         }),
+        ...(msg.isEdited && { isEdited: true, editedAt: msg.editedAt }),
       };
-
-      console.log("Processed message:", { friendId, newMsg });
 
       setMessagesMap((prev) => {
         const updated = {
@@ -86,54 +312,35 @@ const ChatPopupContainer: React.FC = () => {
           [friendId]: [...(prev[friendId] || []), newMsg],
         };
         saveMessagesToStorage(updated);
-
-        // AUTO SCROLL to bottom
-        setTimeout(() => {
-          messagesEndRefs.current[friendId]?.scrollIntoView({
-            behavior: "smooth",
-          });
-        }, 100);
-
         return updated;
       });
     },
     [loggedInUserId, saveMessagesToStorage]
   );
 
-  //  Socket connection + listeners
+  // Socket listeners
   useEffect(() => {
     console.log("🔌 Socket connecting...");
-
     if (loggedInUserId) {
       socket.emit("join", loggedInUserId);
-      console.log("joined socket room:", loggedInUserId);
+      console.log("joined room:", loggedInUserId);
     }
 
-    socket.on("connect", () => {
-      console.log(" SOCKET CONNECTED");
-    });
-
-    socket.on("disconnect", () => {
-      console.log("❌ SOCKET DISCONNECTED");
-    });
-
-    // Listen for receiveMessage
+    socket.on("connect", () => console.log("✅ SOCKET CONNECTED"));
     socket.on("receiveMessage", handleReceiveMessage);
 
     return () => {
       socket.off("connect");
-      socket.off("disconnect");
       socket.off("receiveMessage");
     };
   }, [loggedInUserId, handleReceiveMessage]);
 
-  // Fetch friends + load storage
+  // Initial load
   useEffect(() => {
     fetchFriends();
     loadMessagesFromStorage();
   }, [loadMessagesFromStorage]);
 
-  // Fetch friends
   const fetchFriends = async () => {
     try {
       const token = getToken();
@@ -144,7 +351,6 @@ const ChatPopupContainer: React.FC = () => {
       });
 
       if (!res.ok) throw new Error("Failed to fetch friends");
-
       const data: Friend[] = await res.json();
       setFriends(data);
     } catch (err) {
@@ -158,14 +364,7 @@ const ChatPopupContainer: React.FC = () => {
     }
 
     const existingMessages = messagesMap[friend._id];
-    if (existingMessages && existingMessages.length > 0) {
-      setTimeout(() => {
-        messagesEndRefs.current[friend._id]?.scrollIntoView({
-          behavior: "smooth",
-        });
-      }, 100);
-      return;
-    }
+    if (existingMessages?.length > 0) return;
 
     setIsLoadingMessages((prev) => ({ ...prev, [friend._id]: true }));
 
@@ -181,10 +380,7 @@ const ChatPopupContainer: React.FC = () => {
         },
       });
 
-      if (!res.ok) {
-        console.error("Failed to fetch messages:", res.status);
-        return;
-      }
+      if (!res.ok) return;
 
       const data = await res.json();
       const mapped: Message[] = data.map((m: any) => ({
@@ -195,6 +391,7 @@ const ChatPopupContainer: React.FC = () => {
           hour: "2-digit",
           minute: "2-digit",
         }),
+        ...(m.isEdited && { isEdited: true, editedAt: m.editedAt }),
       }));
 
       setMessagesMap((prev) => {
@@ -213,54 +410,12 @@ const ChatPopupContainer: React.FC = () => {
     setOpenChats((prev) => prev.filter((f) => f._id !== friendId));
   };
 
-  //send message handler
-  const handleSend = (friendId: string) => {
-    const text = inputMap[friendId]?.trim();
-    if (!text) return;
-
-    const msg: Message = {
-      _id: String(Date.now()),
-      text,
-      from: "me",
-      time: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    };
-
-    // Optimistic update (shows immediately in sender UI)
-    setMessagesMap((prev) => {
-      const updated = {
-        ...prev,
-        [friendId]: [...(prev[friendId] || []), msg],
-      };
-      saveMessagesToStorage(updated);
-      return updated;
-    });
-
-    setInputMap((prev) => ({ ...prev, [friendId]: "" }));
-
-    // Emit via socket
-    socket.emit("message", { to: friendId, from: loggedInUserId, text });
-    console.log("Sent message via socket:", {
-      to: friendId,
-      from: loggedInUserId,
-      text,
-    });
-
-    setTimeout(() => {
-      messagesEndRefs.current[friendId]?.scrollIntoView({ behavior: "smooth" });
-    }, 50);
-  };
-
-  // Auto-save to localStorage
+  // Auto-save
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (Object.keys(messagesMap).length > 0) {
+      if (Object.keys(messagesMap).length > 0)
         saveMessagesToStorage(messagesMap);
-      }
     }, 500);
-
     return () => clearTimeout(timeoutId);
   }, [messagesMap, saveMessagesToStorage]);
 
@@ -270,7 +425,7 @@ const ChatPopupContainer: React.FC = () => {
 
   return (
     <div className="flex h-full relative">
-      {/* Left: Friend List */}
+      {/* Friend List */}
       <div className="w-80 flex flex-col bg-gradient-to-b from-black via-[#3a0000] to-[#a30000] p-4">
         <div className="flex items-center gap-2 mb-4 bg-[#1f1f1f] p-2 rounded-md">
           <input
@@ -281,12 +436,7 @@ const ChatPopupContainer: React.FC = () => {
             className="flex-1 px-3 py-2 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[#2a2a2a]"
           />
         </div>
-
         <div className="flex-1 overflow-y-auto space-y-3">
-          {filteredFriends.length === 0 && (
-            <p className="text-gray-400 text-center">No friends found.</p>
-          )}
-
           {filteredFriends.map((friend) => (
             <div
               key={friend._id}
@@ -346,34 +496,162 @@ const ChatPopupContainer: React.FC = () => {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2 h-60">
+          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2 h-60 relative">
             {isLoadingMessages[friend._id] ? (
               <div className="flex items-center justify-center h-full text-gray-400">
-                Loading messages...
+                Loading...
               </div>
             ) : (
               <>
-                {(messagesMap[friend._id] || []).map((m) => (
-                  <div
-                    key={m._id}
-                    className={`flex ${
-                      m.from === "me" ? "justify-end" : "justify-start"
-                    }`}
-                  >
+                {(messagesMap[friend._id] || []).map((m) => {
+                  const editMode = editModeMap[m._id];
+                  const isMenuOpen = menuOpen === m._id;
+                  return (
                     <div
-                      className={`max-w-[70%] px-3 py-2 rounded-2xl ${
-                        m.from === "me"
-                          ? "bg-indigo-600 text-white rounded-br-sm"
-                          : "bg-[#15171c] text-gray-100 rounded-bl-sm"
-                      }`}
+                      key={m._id}
+                      className={`flex ${
+                        m.from === "me" ? "justify-end" : "justify-start"
+                      } mb-2`}
                     >
-                      <p className="text-[13px]">{m.text}</p>
-                      <span className="block text-[10px] text-gray-400 text-right mt-1">
-                        {m.time}
-                      </span>
+                      <div className="flex flex-col items-end">
+                        {editMode?.editing ? (
+                          <div className="flex gap-1 w-full">
+                            <input
+                              type="text"
+                              value={editMode.tempText}
+                              onChange={(e) =>
+                                setEditModeMap((prev) => ({
+                                  ...prev,
+                                  [m._id!]: {
+                                    ...prev[m._id!],
+                                    tempText: e.target.value,
+                                  },
+                                }))
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter")
+                                  handleEditMessage(
+                                    friend._id,
+                                    m._id!,
+                                    editMode.tempText
+                                  );
+                                else if (e.key === "Escape")
+                                  setEditModeMap((prev) => ({
+                                    ...prev,
+                                    [m._id!]: undefined,
+                                  }));
+                              }}
+                              className="flex-1 px-3 py-2 rounded-2xl bg-indigo-600 text-white text-[13px] outline-none"
+                              autoFocus
+                            />
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() =>
+                                  handleEditMessage(
+                                    friend._id,
+                                    m._id!,
+                                    editMode.tempText
+                                  )
+                                }
+                                className="text-xs text-blue-200 hover:text-blue-400 p-1"
+                                title="Save (Enter)"
+                              >
+                                ✓
+                              </button>
+                              <button
+                                onClick={() =>
+                                  setEditModeMap((prev) => ({
+                                    ...prev,
+                                    [m._id!]: undefined,
+                                  }))
+                                }
+                                className="text-xs text-gray-400 hover:text-gray-200 p-1"
+                                title="Cancel (Escape)"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-end gap-2 w-full">
+                              <div
+                                className={`flex-1 px-3 py-2 rounded-2xl ${
+                                  m.from === "me"
+                                    ? "bg-indigo-600 text-white rounded-br-sm"
+                                    : "bg-[#15171c] text-gray-100 rounded-bl-sm"
+                                }`}
+                              >
+                                <p className="text-[13px]">{m.text}</p>
+                                <div className="flex justify-between items-center mt-1">
+                                  <span className="block text-[10px] text-gray-400">
+                                    {m.time}
+                                    {m.isEdited && (
+                                      <span className="ml-1 text-[8px]">
+                                        (edited)
+                                      </span>
+                                    )}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* ✅ FIXED: 3 dots ONLY for valid server IDs */}
+                              {m.from === "me" &&
+                                !m._id.startsWith("temp_") &&
+                                !/^\d+$/.test(m._id) && (
+                                  <div className="relative">
+                                    <button
+                                      className="p-1.5 text-gray-400 hover:text-white rounded-full hover:bg-gray-700 transition-all text-sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleMenu(m._id);
+                                      }}
+                                      title="More options"
+                                    >
+                                      ⋮⋮⋮
+                                    </button>
+                                    {isMenuOpen && (
+                                      <div className="absolute top-6 right-0 bg-[#15171c] rounded-lg shadow-lg py-1 border border-gray-700 w-24 z-20">
+                                        <button
+                                          onClick={() =>
+                                            toggleEditMode(
+                                              friend._id,
+                                              m._id!,
+                                              m.text
+                                            )
+                                          }
+                                          className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-600 flex items-center gap-2"
+                                        >
+                                          <span className="text-blue-400">
+                                            ✏️
+                                          </span>
+                                          Edit
+                                        </button>
+                                        <button
+                                          onClick={() =>
+                                            handleDeleteMessage(
+                                              friend._id,
+                                              m._id!
+                                            )
+                                          }
+                                          className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-600 flex items-center gap-2"
+                                        >
+                                          <span className="text-red-400">
+                                            🗑️
+                                          </span>
+                                          Delete
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 <div ref={(el) => (messagesEndRefs.current[friend._id] = el)} />
               </>
             )}
