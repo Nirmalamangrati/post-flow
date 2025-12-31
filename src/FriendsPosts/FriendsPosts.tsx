@@ -17,7 +17,7 @@ interface Post {
   comments: Comment[];
 }
 
-const API_BASE = "http://localhost:8000/api";
+const API_BASE = "https://backend-of-postflow-fioq.vercel.app/api";
 
 const FriendsPosts: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);

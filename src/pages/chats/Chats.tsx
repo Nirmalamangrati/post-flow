@@ -17,8 +17,8 @@ interface Message {
   editedAt?: string;
 }
 
-const API_BASE = "http://localhost:8000/api";
-const socket: Socket = io("http://localhost:8000");
+const API_BASE = "https://backend-of-postflow-fioq.vercel.app/api";
+const socket: Socket = io("https://backend-of-postflow-fioq.vercel.app");
 
 const ChatPopupContainer: React.FC = () => {
   const [friends, setFriends] = useState<Friend[]>([]);

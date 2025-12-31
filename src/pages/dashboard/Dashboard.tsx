@@ -1,5 +1,6 @@
 import { useEffect, useState, type ChangeEvent } from "react";
 import ChatWindow from "../chats/Chats";
+import NotificationBell from "../notification/NotificationBell";
 type User = {
   _id: string;
   fullname: string;
@@ -66,6 +67,7 @@ export default function Dashboard() {
   const [showFriendRequests, setShowFriendRequests] = useState(false);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const [commentInputOpen, setCommentInputOpen] = useState<{
@@ -78,7 +80,7 @@ export default function Dashboard() {
       try {
         const token = localStorage.getItem("token");
         const res = await fetch(
-          "http://localhost:8000/api/friends/get-friend-requests",
+          "https://backend-of-postflow-fioq.vercel.app/api/friends/get-friend-requests",
           {
             headers: {
               "Content-Type": "application/json",
@@ -114,8 +116,8 @@ export default function Dashboard() {
     try {
       const url =
         filter === "all"
-          ? "http://localhost:8000/dashboard"
-          : `http://localhost:8000/dashboard?filter=${encodeURIComponent(
+          ? "https://backend-of-postflow-fioq.vercel.app/dashboard"
+          : `https://backend-of-postflow-fioq.vercel.app/dashboard?filter=${encodeURIComponent(
               filter
             )}`;
 
@@ -152,25 +154,31 @@ export default function Dashboard() {
     if (selectedFile) {
       const formData = new FormData();
       formData.append("media", selectedFile);
-      const uploadRes = await fetch("http://localhost:8000/api/upload", {
-        method: "POST",
-        body: formData,
-      });
+      const uploadRes = await fetch(
+        "https://backend-of-postflow-fioq.vercel.app/api/upload",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
       const uploadData = await uploadRes.json();
       imageUrl = uploadData.url;
     }
 
-    const res = await fetch("http://localhost:8000/dashboard", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        caption: modalCaption,
-        imageUrl,
-        mediaType,
-        userId,
-        fullName,
-      }),
-    });
+    const res = await fetch(
+      "https://backend-of-postflow-fioq.vercel.app/dashboard",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caption: modalCaption,
+          imageUrl,
+          mediaType,
+          userId,
+          fullName,
+        }),
+      }
+    );
     const newPost = await res.json();
     setPosts([newPost, ...posts]);
     setIsModalOpen(false);
@@ -182,7 +190,7 @@ export default function Dashboard() {
       const token = localStorage.getItem("token");
 
       const res = await fetch(
-        `http://localhost:8000/dashboard/${postId}/like`,
+        `https://backend-of-postflow-fioq.vercel.app/dashboard/${postId}/like`,
         {
           method: "POST",
           headers: {
@@ -217,7 +225,7 @@ export default function Dashboard() {
 
     try {
       const res = await fetch(
-        `http://localhost:8000/dashboard/comment/${postId}`,
+        `https://backend-of-postflow-fioq.vercel.app/dashboard/comment/${postId}`,
         {
           method: "POST",
           headers: {
@@ -272,7 +280,7 @@ export default function Dashboard() {
 
     try {
       const res = await fetch(
-        `http://localhost:8000/dashboard/comment/${postId}/${commentId}`,
+        `https://backend-of-postflow-fioq.vercel.app/dashboard/comment/${postId}/${commentId}`,
         {
           method: "DELETE",
           headers: {
@@ -314,7 +322,7 @@ export default function Dashboard() {
 
     try {
       const res = await fetch(
-        `http://localhost:8000/dashboard/comment/${postId}/${commentId}`,
+        `https://backend-of-postflow-fioq.vercel.app/dashboard/comment/${postId}/${commentId}`,
         {
           method: "PUT",
           headers: {
@@ -401,11 +409,14 @@ export default function Dashboard() {
       return;
     }
 
-    const res = await fetch(`http://localhost:8000/dashboard/${postId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ caption: editingCaption }),
-    });
+    const res = await fetch(
+      `https://backend-of-postflow-fioq.vercel.app/dashboard/${postId}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ caption: editingCaption }),
+      }
+    );
 
     if (res.ok) {
       const updated = await res.json();
@@ -420,9 +431,12 @@ export default function Dashboard() {
   async function deletePost(postId: string) {
     if (!window.confirm("Are you sure you want to delete this post?")) return;
 
-    const res = await fetch(`http://localhost:8000/dashboard/${postId}`, {
-      method: "DELETE",
-    });
+    const res = await fetch(
+      `https://backend-of-postflow-fioq.vercel.app/dashboard/${postId}`,
+      {
+        method: "DELETE",
+      }
+    );
 
     if (res.ok) {
       setPosts(posts.filter((p) => p._id !== postId));
@@ -439,8 +453,8 @@ export default function Dashboard() {
     try {
       const url =
         categoryOrKeyword === "all"
-          ? "http://localhost:8000/dashboard"
-          : `http://localhost:8000/dashboard?filter=${encodeURIComponent(
+          ? "https://backend-of-postflow-fioq.vercel.app/dashboard"
+          : `https://backend-of-postflow-fioq.vercel.app/dashboard?filter=${encodeURIComponent(
               categoryOrKeyword
             )}`;
 
@@ -461,7 +475,7 @@ export default function Dashboard() {
   const handleAccept = async (friendId: string) => {
     try {
       const res = await fetch(
-        `http://localhost:8000/api/friends/accept/${friendId}`,
+        `https://backend-of-postflow-fioq.vercel.app/api/friends/accept/${friendId}`,
         {
           method: "POST",
           headers: {
@@ -486,7 +500,7 @@ export default function Dashboard() {
 
       // Call backend to remove friend
       const res = await fetch(
-        `http://localhost:8000/api/friends/remove/${requestId}`,
+        `https://backend-of-postflow-fioq.vercel.app/api/friends/remove/${requestId}`,
         {
           method: "DELETE",
           headers: {
@@ -584,7 +598,12 @@ export default function Dashboard() {
           💬
         </button>
 
-        <button className="p-2 rounded ml-16">🔔</button>
+        <button
+          onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+          className="p-2 rounded ml-16 relative"
+        >
+          🔔
+        </button>
       </div>
 
       <div className=" flex gap-4 items-center mb-3">
@@ -969,6 +988,33 @@ export default function Dashboard() {
       {isChatOpen && (
         <div className="w-80 h-180 bg-gray-100 p-4 border-l border-gray-200 fixed top-8 right-0  bottom-4 shadow-lg rounded">
           <ChatWindow />
+        </div>
+      )}
+
+      {isNotificationOpen && (
+        <div className="w-80 h-180 bg-gray-100 p-4 border-l border-gray-200 fixed top-8 right-0  bottom-4 shadow-lg rounded">
+          <div className="bg-white w-full max-w-md max-h-[100vh] rounded-xl shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-black to-red-700 p-4 text-white">
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-bold items-center justify-center">
+                  Notifications
+                </h3>
+                <button
+                  onClick={() => setIsNotificationOpen(false)}
+                  className="text-white text-2xl hover:bg-black hover:bg-opacity-50 p-1 rounded-full"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div className="p-4 max-h-96 overflow-y-auto">
+              <p className="text-gray-500 text-center py-8">
+                No notifications yet ...
+              </p>
+            </div>
+          </div>
         </div>
       )}
 

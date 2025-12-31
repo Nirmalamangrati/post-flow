@@ -48,11 +48,14 @@ const Registration = () => {
     }
 
     try {
-      const res = await fetch("http://localhost:8000/api/users/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
+      const res = await fetch(
+        "https://backend-of-postflow-fioq.vercel.app/api/users/register",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        }
+      );
 
       const data = await res.json();
       console.log(data, "@data");

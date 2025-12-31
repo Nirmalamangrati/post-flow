@@ -24,7 +24,7 @@ const Setting = () => {
 
     try {
       const response = await fetch(
-        "http://localhost:8000/api/users/change-password",
+        "https://backend-of-postflow-fioq.vercel.app/api/users/change-password",
         {
           method: "PUT",
           headers: {

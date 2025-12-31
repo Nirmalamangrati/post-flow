@@ -8,7 +8,7 @@ interface Friend {
   profilePic: string;
 }
 
-const API_BASE = "http://localhost:8000/api";
+const API_BASE = "https://backend-of-postflow-fioq.vercel.app/api";
 
 const FriendList: React.FC = () => {
   const [friends, setFriends] = useState<Friend[]>([]);

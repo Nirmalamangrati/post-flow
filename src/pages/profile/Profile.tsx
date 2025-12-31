@@ -83,13 +83,16 @@ export default function Profile() {
 
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:8000/profilehandler", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
+      const res = await fetch(
+        "https://backend-of-postflow-fioq.vercel.app/profilehandler",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
 
       const data = await res.json();
 
@@ -118,12 +121,15 @@ export default function Profile() {
     try {
       const token = localStorage.getItem("token");
 
-      const res = await fetch("http://localhost:8000/profilehandler/my-post", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await fetch(
+        "https://backend-of-postflow-fioq.vercel.app/profilehandler/my-post",
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (!res.ok) throw new Error("Failed to fetch user posts");
 
@@ -137,7 +143,9 @@ export default function Profile() {
       setPosts(postsWithLikeInfo);
 
       if (data.length > 0) {
-        setLastUploadedImageUrl(`http://localhost:8000${data[0].imageUrl}`);
+        setLastUploadedImageUrl(
+          `https://backend-of-postflow-fioq.vercel.app${data[0].imageUrl}`
+        );
       }
     } catch (error) {
       console.error("Failed to fetch user posts:", error);
@@ -148,7 +156,7 @@ export default function Profile() {
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(
-        `http://localhost:8000/profilehandler/${postId}/like`,
+        `https://backend-of-postflow-fioq.vercel.app/profilehandler/${postId}/like`,
         {
           method: "POST",
           headers: {
@@ -187,7 +195,7 @@ export default function Profile() {
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(
-        `http://localhost:8000/profilehandler/${postId}/comment`,
+        `https://backend-of-postflow-fioq.vercel.app/profilehandler/${postId}/comment`,
         {
           method: "POST",
           headers: {
@@ -222,7 +230,7 @@ export default function Profile() {
   };
 
   const buildPostUrl = (postId: string) => {
-    return `http://localhost:8000/post/${postId}`;
+    return `https://backend-of-postflow-fioq.vercel.app/post/${postId}`;
   };
 
   const openShareWindow = (url: string) => {
@@ -243,7 +251,7 @@ export default function Profile() {
       const token = localStorage.getItem("token");
 
       const res = await fetch(
-        `http://localhost:8000/profilehandler/${postId}`,
+        `https://backend-of-postflow-fioq.vercel.app/profilehandler/${postId}`,
         {
           method: "PUT",
           headers: {
@@ -284,7 +292,7 @@ export default function Profile() {
 
     try {
       const res = await fetch(
-        `http://localhost:8000/profilehandler/${postId}`,
+        `https://backend-of-postflow-fioq.vercel.app/profilehandler/${postId}`,
         {
           method: "DELETE",
           headers: {
@@ -316,7 +324,7 @@ export default function Profile() {
       }
 
       const res = await fetch(
-        `http://localhost:8000/profilehandler/${postId}/comment/${commentId}`,
+        `https://backend-of-postflow-fioq.vercel.app/profilehandler/${postId}/comment/${commentId}`,
         {
           method: "PUT",
           headers: {
@@ -349,7 +357,7 @@ export default function Profile() {
 
     try {
       const res = await fetch(
-        `http://localhost:8000/profilehandler/${postId}/comment/${commentId}`,
+        `https://backend-of-postflow-fioq.vercel.app/profilehandler/${postId}/comment/${commentId}`,
         {
           method: "DELETE",
           headers: {

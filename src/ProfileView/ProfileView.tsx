@@ -11,7 +11,7 @@ interface ProfileViewProps {
   userId: string;
 }
 
-const API_BASE = "http://localhost:8000/api";
+const API_BASE = "https://backend-of-postflow-fioq.vercel.app/api";
 
 const ProfileView: React.FC<ProfileViewProps> = ({ userId }) => {
   const [posts, setPosts] = useState<Post[]>([]);

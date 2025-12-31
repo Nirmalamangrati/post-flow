@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 
 interface FriendRequestProps {
   userId: string;
-  currentFriends: { _id: string }[]; 
+  currentFriends: { _id: string }[];
 }
 
 interface User {
@@ -10,7 +10,7 @@ interface User {
   name: string;
 }
 
-const API_BASE = "http://localhost:8000/api";
+const API_BASE = "https://backend-of-postflow-fioq.vercel.app/api";
 
 const FriendRequest: React.FC<FriendRequestProps> = ({ currentFriends }) => {
   const [message, setMessage] = useState<string>("");

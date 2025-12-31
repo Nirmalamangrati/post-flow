@@ -3,7 +3,7 @@ import Dashboard from "./pages/dashboard/Dashboard";
 import Profile from "./pages/profile/Profile";
 import Theme from "./pages/theme/Theme";
 import Chats from "./pages/chats/Chats";
-import Notification from "./pages/notification/Notification";
+import Notification from "./pages/notification/NotificationBell.tsx";
 
 import Login from "./login/Login";
 import Registration from "./registration/Registration";

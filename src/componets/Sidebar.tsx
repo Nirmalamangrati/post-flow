@@ -72,16 +72,16 @@ export default function Sidebar() {
     ${isOpen ? "translate-x-0" : "-translate-x-full"} 
   `}
       >
-        <div className="flex flex-col h-full justify-between py-4 relative">
+        <div className="flex flex-col h-full justify-between py-10 relative">
           {/* Top Section */}
           <div>
-            <div className="text-center mb-6">
-              <h2 className="text-white text-xl font-semibold mt-2">
+            <div className="text-center  mb-6">
+              <h1 className="absolute left-15 top-3 justify-center text-3xl font-black bg-gradient-to-r from-red-500 via-pink-500 to-purple-500 bg-clip-text text-transparent drop-shadow-lg">
                 PostFlow
-              </h2>
+              </h1>
             </div>
 
-            <hr className="border-t border-white/20 mb-4 mx-4" />
+            <hr className="border-t border-white/20 mb-8 mx-4" />
 
             <ul className="flex flex-col gap-3 relative">
               {menuItems.map((item) => (

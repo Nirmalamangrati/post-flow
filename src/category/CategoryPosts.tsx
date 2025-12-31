@@ -14,7 +14,9 @@ export default function CategoryPosts() {
   const [selectedCategory, setSelectedCategory] = useState<string>("");
 
   const fetchPosts = async (category: string) => {
-    const res = await fetch(`http://localhost:8000/posts/category/${category}`);
+    const res = await fetch(
+      `https://backend-of-postflow-fioq.vercel.app/posts/category/${category}`
+    );
     const data = await res.json();
     setPosts(data);
   };
@@ -45,10 +47,15 @@ export default function CategoryPosts() {
       </div>
 
       <div style={{ flex: 1, padding: "1rem" }}>
-        <h2>{selectedCategory ? `${selectedCategory} Posts` : "Select a category"}</h2>
+        <h2>
+          {selectedCategory ? `${selectedCategory} Posts` : "Select a category"}
+        </h2>
         {posts.map((post) => (
           <div key={post._id} style={{ marginBottom: "20px" }}>
-            <img src={post.imageUrl} style={{ width: "100%", maxWidth: "400px" }} />
+            <img
+              src={post.imageUrl}
+              style={{ width: "100%", maxWidth: "400px" }}
+            />
             <p>{post.caption}</p>
             <small>{post.category}</small>
           </div>

@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -13,7 +12,7 @@ const AutoAdminLogin = () => {
 
     // Auto-login request
     axios
-      .post("http://localhost:8000/api/admin/autologin", {
+      .post("https://backend-of-postflow-fioq.vercel.app/api/admin/autologin", {
         email: "aadminpostflow@gmail.com",
         password: "Admin4466@&$",
       })
@@ -21,10 +20,13 @@ const AutoAdminLogin = () => {
         const { token, user } = res.data;
         localStorage.setItem("token", token);
         localStorage.setItem("user", JSON.stringify(user));
-        navigate("/admin/dashboard"); 
+        navigate("/admin/dashboard");
       })
       .catch((err) => {
-        console.error("Admin auto-login failed:", err.response?.data?.message || err.message);
+        console.error(
+          "Admin auto-login failed:",
+          err.response?.data?.message || err.message
+        );
       });
   }, []);
 

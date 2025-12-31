@@ -10,11 +10,14 @@ export default function PostUploader() {
   const handleUpload = async () => {
     if (!caption || !imageUrl || !category) return alert("Fill all fields");
 
-    const res = await fetch("http://localhost:8000/posts/upload", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ caption, imageUrl, category, userId: "12345" }),
-    });
+    const res = await fetch(
+      "https://backend-of-postflow-fioq.vercel.app/posts/upload",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ caption, imageUrl, category, userId: "12345" }),
+      }
+    );
 
     const data = await res.json();
     console.log("Uploaded:", data);

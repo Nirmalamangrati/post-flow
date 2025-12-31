@@ -157,7 +157,7 @@ export default function Theme() {
     frames.find((f) => f._id === profileFrame) || frames[0];
 
   useEffect(() => {
-    fetch("http://localhost:8000/theme")
+    fetch("https://backend-of-postflow-fioq.vercel.app/theme")
       .then((res) => res.json())
       .then((data) => {
         console.log("Fetched posts:", data);
@@ -188,11 +188,14 @@ export default function Theme() {
 
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:8000/theme-upload", {
-        method: "POST",
-        body: formData,
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        "https://backend-of-postflow-fioq.vercel.app/theme-upload",
+        {
+          method: "POST",
+          body: formData,
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
@@ -219,7 +222,7 @@ export default function Theme() {
       const token = localStorage.getItem("token");
 
       const res = await fetch(
-        `http://localhost:8000/dashboard/${postId}/like`,
+        `https://backend-of-postflow-fioq.vercel.app/dashboard/${postId}/like`,
         {
           method: "POST",
           headers: {
@@ -263,7 +266,7 @@ export default function Theme() {
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(
-        `http://localhost:8000/dashboard/comment/${postId}`,
+        `https://backend-of-postflow-fioq.vercel.app/dashboard/comment/${postId}`,
         {
           method: "POST",
           headers: {
@@ -306,7 +309,9 @@ export default function Theme() {
   };
 
   const buildPostUrl = (postId: string) =>
-    encodeURIComponent(`http://localhost:8000/post/${postId}`);
+    encodeURIComponent(
+      `https://backend-of-postflow-fioq.vercel.app/post/${postId}`
+    );
   const openShareWindow = (url: string) =>
     window.open(url, "_blank", "width=600,height=400");
 
@@ -324,14 +329,17 @@ export default function Theme() {
       return;
     }
 
-    const res = await fetch(`http://localhost:8000/dashboard/${postId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ caption: editingCaption }),
-    });
+    const res = await fetch(
+      `https://backend-of-postflow-fioq.vercel.app/dashboard/${postId}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ caption: editingCaption }),
+      }
+    );
 
     if (res.ok) {
       const updated = await res.json();
@@ -346,9 +354,12 @@ export default function Theme() {
   async function deletePost(postId: string) {
     if (!window.confirm("Are you sure you want to delete this post?")) return;
 
-    const res = await fetch(`http://localhost:8000/dashboard/${postId}`, {
-      method: "DELETE",
-    });
+    const res = await fetch(
+      `https://backend-of-postflow-fioq.vercel.app/dashboard/${postId}`,
+      {
+        method: "DELETE",
+      }
+    );
 
     if (res.ok) {
       setPosts(posts.filter((p) => p._id !== postId));
@@ -389,7 +400,7 @@ export default function Theme() {
       }
 
       const res = await fetch(
-        `http://localhost:8000/dashboard/comment/${postId}/${commentId}`,
+        `https://backend-of-postflow-fioq.vercel.app/dashboard/comment/${postId}/${commentId}`,
         {
           method: "PUT",
           headers: {
@@ -422,7 +433,7 @@ export default function Theme() {
 
     try {
       const res = await fetch(
-        `http://localhost:8000/dashboard/comment/${postId}/${commentId}`,
+        `https://backend-of-postflow-fioq.vercel.app/dashboard/comment/${postId}/${commentId}`,
         {
           method: "DELETE",
           headers: {
@@ -462,7 +473,7 @@ export default function Theme() {
   };
   const getProfilePicUrl = (profilePic?: string) => {
     if (profilePic && profilePic.startsWith("/")) {
-      return `http://localhost:8000${profilePic}`;
+      return `https://backend-of-postflow-fioq.vercel.app${profilePic}`;
     }
     if (profilePic) {
       return profilePic;
