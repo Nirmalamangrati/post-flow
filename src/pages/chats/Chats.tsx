@@ -80,11 +80,10 @@ const ChatPopupContainer: React.FC = () => {
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
-  // ✅ FIXED: Delete message - Check valid ID first
   const handleDeleteMessage = async (friendId: string, messageId: string) => {
     // Block temp/numeric IDs
     if (messageId.startsWith("temp_") || /^\d+$/.test(messageId)) {
-      console.log("❌ Cannot delete temp message:", messageId);
+      console.log(" Cannot delete temp message:", messageId);
       setMenuOpen(null);
       return;
     }
@@ -118,7 +117,6 @@ const ChatPopupContainer: React.FC = () => {
     setMenuOpen(null);
   };
 
-  // ✅ FIXED: Edit message - Check valid ID first
   const handleEditMessage = async (
     friendId: string,
     messageId: string,
@@ -126,7 +124,7 @@ const ChatPopupContainer: React.FC = () => {
   ) => {
     // Block temp/numeric IDs
     if (messageId.startsWith("temp_") || /^\d+$/.test(messageId)) {
-      console.log("❌ Cannot edit temp message:", messageId);
+      console.log(" Cannot edit temp message:", messageId);
       setMenuOpen(null);
       return;
     }
@@ -188,7 +186,7 @@ const ChatPopupContainer: React.FC = () => {
   ) => {
     // Block temp IDs from edit mode
     if (messageId.startsWith("temp_") || /^\d+$/.test(messageId)) {
-      console.log("❌ Cannot edit temp message");
+      console.log(" Cannot edit temp message");
       return;
     }
 
@@ -199,7 +197,6 @@ const ChatPopupContainer: React.FC = () => {
     setMenuOpen(null);
   };
 
-  // ✅ FIXED: handleSend with SERVER API CALL
   const handleSend = async (friendId: string) => {
     const text = inputMap[friendId]?.trim();
     if (!text) return;
@@ -243,7 +240,7 @@ const ChatPopupContainer: React.FC = () => {
       if (!res.ok) throw new Error("Server error");
 
       const serverMsg = await res.json();
-      console.log("✅ SERVER ID:", serverMsg._id);
+      console.log(" SERVER ID:", serverMsg._id);
 
       // 3. Replace temp ID with real server ID
       setMessagesMap((prev) => {
@@ -270,7 +267,7 @@ const ChatPopupContainer: React.FC = () => {
       // 4. Socket emit for real-time
       socket.emit("message", { to: friendId, from: loggedInUserId, text });
     } catch (error) {
-      console.error("❌ Send failed:", error);
+      console.error(" Send failed:", error);
       // Rollback temp message on error
       setMessagesMap((prev) => {
         const updated = { ...prev };
@@ -292,7 +289,7 @@ const ChatPopupContainer: React.FC = () => {
   // Receive message handler
   const handleReceiveMessage = useCallback(
     (msg: any) => {
-      console.log("🎉 RECEIVED:", msg);
+      console.log("RECEIVED:", msg);
       const friendId = msg.from === loggedInUserId ? msg.to : msg.from;
 
       const newMsg: Message = {
@@ -326,7 +323,7 @@ const ChatPopupContainer: React.FC = () => {
       console.log("joined room:", loggedInUserId);
     }
 
-    socket.on("connect", () => console.log("✅ SOCKET CONNECTED"));
+    socket.on("connect", () => console.log(" SOCKET CONNECTED"));
     socket.on("receiveMessage", handleReceiveMessage);
 
     return () => {
@@ -595,7 +592,6 @@ const ChatPopupContainer: React.FC = () => {
                                 </div>
                               </div>
 
-                              {/* ✅ FIXED: 3 dots ONLY for valid server IDs */}
                               {m.from === "me" &&
                                 !m._id.startsWith("temp_") &&
                                 !/^\d+$/.test(m._id) && (

@@ -1,6 +1,6 @@
 import { useEffect, useState, type ChangeEvent } from "react";
 import ChatWindow from "../chats/Chats";
-import NotificationBell from "../notification/NotificationBell";
+// import NotificationBell from "../notification/NotificationBell";
 type User = {
   _id: string;
   fullname: string;
